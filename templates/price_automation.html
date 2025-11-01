@@ -2525,7 +2525,7 @@
                     const maxAlternativeDays = getMaxAlternativeDays();
                     
                     // Determine pickup date based on selection type
-                    const pickupDate = dateSelection.type === 'specific' ? dateSelection.date : dateSelection.startDate;
+                    const pickupDate = dateSelection.startDate;
                     
                     // Try original date and up to X days forward (configurable in settings)
                     for (let dateOffset = 0; dateOffset <= maxAlternativeDays && !foundPrices; dateOffset++) {
@@ -2652,8 +2652,8 @@
                 // STEP 2: Calculate Auto prices based on strategies (using ALL cars from search)
                 const automatedRules = JSON.parse(localStorage.getItem('automatedPriceRules') || '{}');
                 
-                // Determine date and month based on selection type
-                const effectiveDate = dateSelection.type === 'specific' ? dateSelection.date : dateSelection.startDate;
+                // Determine date and month based on selection type  
+                const effectiveDate = dateSelection.startDate;
                 const date = new Date(effectiveDate);
                 const month = date.getMonth() + 1; // 1-12
                 
