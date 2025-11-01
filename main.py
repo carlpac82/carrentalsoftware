@@ -3818,6 +3818,35 @@ async def track_by_params(request: Request):
                     
                     time.sleep(0.5)
                     
+                    # VERIFICAR SE APARECEU SEGUNDO POPUP DE COOKIES
+                    print(f"[SELENIUM] Verificando segundo popup de cookies...", file=sys.stderr, flush=True)
+                    try:
+                        # Procurar pelo texto dos botões de cookies em português
+                        second_cookie_selectors = [
+                            "//button[contains(text(), 'Aceitar todos os cookies')]",
+                            "//button[contains(text(), 'Aceitar todos')]",
+                            "//button[contains(., 'Aceitar todos os cookies')]",
+                            "button:contains('Aceitar todos os cookies')",
+                            "button[class*='cookie']:contains('Aceitar')",
+                        ]
+                        
+                        for sel in second_cookie_selectors:
+                            try:
+                                if sel.startswith('//'):
+                                    cookie_btn = driver.find_element(By.XPATH, sel)
+                                else:
+                                    cookie_btn = driver.find_element(By.CSS_SELECTOR, sel)
+                                
+                                if cookie_btn and cookie_btn.is_displayed():
+                                    cookie_btn.click()
+                                    print(f"[SELENIUM] ✓ Segundo popup de cookies aceito!", file=sys.stderr, flush=True)
+                                    time.sleep(1)
+                                    break
+                            except:
+                                pass
+                    except:
+                        print(f"[SELENIUM] Nenhum segundo popup encontrado", file=sys.stderr, flush=True)
+                    
                     # 2. Preencher datas e horas via JavaScript
                     driver.execute_script("""
                         function fill(sel, val) {
