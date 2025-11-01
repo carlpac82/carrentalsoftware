@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Histórico de Preços - Auto Prudente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        img[alt="Profile"], img[src*="profile"], .profile-picture { border-radius: 50% !important; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <header class="bg-[#009cb6] border-b">
+        <div class="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="/" class="inline-flex items-center" title="Homepage">
+                    <img src="/static/ap-heather.png" alt="Auto Prudente" class="h-12 w-auto" />
+                </a>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="/" class="p-2 text-white/90 hover:text-white hover:bg-white/10 transition-all" title="Home">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+                    </svg>
+                </a>
+                {% if request.session and request.session.get('is_admin') %}
+                <a href="/admin" class="p-2 text-white/90 hover:text-white hover:bg-white/10 transition-all" title="Settings">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-6xl px-4 py-6">
+        <div class="mb-6">
+            <h1 class="text-2xl font-bold text-gray-900 mb-2">Histórico de Preços</h1>
+            <p class="text-gray-600">Análise e evolução de preços ao longo do tempo</p>
+        </div>
+
+        <!-- Filtros -->
+        <div class="bg-white p-4 shadow mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Localização</label>
+                    <select id="filterLocation" class="w-full px-3 py-2 border border-gray-300">
+                        <option value="">Todas</option>
+                        <option value="Aeroporto de Faro">Aeroporto de Faro</option>
+                        <option value="Albufeira">Albufeira</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Período (dias)</label>
+                    <select id="filterDays" class="w-full px-3 py-2 border border-gray-300">
+                        <option value="">Todos</option>
+                        <option value="1">1 dia</option>
+                        <option value="2">2 dias</option>
+                        <option value="3">3 dias</option>
+                        <option value="4">4 dias</option>
+                        <option value="5">5 dias</option>
+                        <option value="6">6 dias</option>
+                        <option value="7">7 dias</option>
+                        <option value="8">8 dias</option>
+                        <option value="9">9 dias</option>
+                        <option value="14">14 dias</option>
+                        <option value="22">22 dias</option>
+                        <option value="28">28 dias</option>
+                        <option value="31">31 dias</option>
+                        <option value="60">60 dias</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
+                    <select id="filterCategory" class="w-full px-3 py-2 border border-gray-300">
+                        <option value="">Todas</option>
+                        <option value="B1">B1 - Mini 4 Doors</option>
+                        <option value="B2">B2 - Mini</option>
+                        <option value="D">D - Economy</option>
+                        <option value="E1">E1 - Mini Automatic</option>
+                        <option value="E2">E2 - Economy Automatic</option>
+                        <option value="F">F - SUV</option>
+                        <option value="G">G - Premium</option>
+                        <option value="J1">J1 - Crossover</option>
+                        <option value="J2">J2 - Station Wagon</option>
+                        <option value="L1">L1 - SUV Automatic</option>
+                        <option value="L2">L2 - Station Wagon Automatic</option>
+                        <option value="M1">M1 - 7 Seater</option>
+                        <option value="M2">M2 - 7 Seater Automatic</option>
+                        <option value="N">N - 9 Seater</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button onclick="loadData()" class="w-full px-4 py-2 bg-[#009cb6] text-white hover:bg-[#f4ad0f] transition-colors">
+                        Atualizar
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficos -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div class="bg-white p-6 shadow">
+                <h2 class="text-lg font-semibold mb-4">Evolução de Preços Médios</h2>
+                <canvas id="priceEvolutionChart"></canvas>
+            </div>
+            <div class="bg-white p-6 shadow">
+                <h2 class="text-lg font-semibold mb-4">Comparação por Localização</h2>
+                <canvas id="locationComparisonChart"></canvas>
+            </div>
+        </div>
+
+        <div class="bg-white p-6 shadow">
+            <h2 class="text-lg font-semibold mb-4">Preços por Mês do Ano</h2>
+            <canvas id="monthlyPricesChart"></canvas>
+        </div>
+    </main>
+
+    <script>
+        let priceEvolutionChart, locationComparisonChart, monthlyPricesChart;
+
+        async function loadData() {
+            const location = document.getElementById('filterLocation').value;
+            const days = document.getElementById('filterDays').value;
+            const category = document.getElementById('filterCategory').value;
+
+            try {
+                const resp = await fetch(`/api/price-history?location=${location}&days=${days}&category=${category}`);
+                const data = await resp.json();
+
+                if (data.ok) {
+                    renderCharts(data);
+                }
+            } catch (err) {
+                console.error('Erro ao carregar dados:', err);
+            }
+        }
+
+        function renderCharts(data) {
+            // Gráfico de Evolução com Min, Médio, Máximo
+            const ctx1 = document.getElementById('priceEvolutionChart').getContext('2d');
+            if (priceEvolutionChart) priceEvolutionChart.destroy();
+            priceEvolutionChart = new Chart(ctx1, {
+                type: 'line',
+                data: {
+                    labels: data.evolution?.labels || [],
+                    datasets: [
+                        {
+                            label: 'Preço Mínimo (€)',
+                            data: data.evolution?.min || [],
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Preço Médio (€)',
+                            data: data.evolution?.avg || [],
+                            borderColor: '#009cb6',
+                            backgroundColor: 'rgba(0, 156, 182, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Preço Máximo (€)',
+                            data: data.evolution?.max || [],
+                            borderColor: '#ef4444',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            tension: 0.4,
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: true }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: false
+                        }
+                    }
+                }
+            });
+
+            // Gráfico de Comparação
+            const ctx2 = document.getElementById('locationComparisonChart').getContext('2d');
+            if (locationComparisonChart) locationComparisonChart.destroy();
+            locationComparisonChart = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: data.comparison?.labels || [],
+                    datasets: [{
+                        label: 'Preço Médio (€)',
+                        data: data.comparison?.values || [],
+                        backgroundColor: ['#009cb6', '#f4ad0f']
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+
+            // Gráfico Mensal
+            const ctx3 = document.getElementById('monthlyPricesChart').getContext('2d');
+            if (monthlyPricesChart) monthlyPricesChart.destroy();
+            monthlyPricesChart = new Chart(ctx3, {
+                type: 'bar',
+                data: {
+                    labels: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+                    datasets: [{
+                        label: 'Preço Médio (€)',
+                        data: data.monthly?.values || [],
+                        backgroundColor: '#009cb6'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: { display: false }
+                    }
+                }
+            });
+        }
+
+        // Carregar dados iniciais
+        loadData();
+    </script>
+</body>
+</html>

@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+    <meta http-equiv="Pragma" content="no-cache"/>
+    <meta http-equiv="Expires" content="0"/>
+    <title>Rental Prices - Auto Prudente v2</title>
+    <link rel="icon" type="image/png" href="/static/autoprudente-favicon.png?v=2" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --brand-yellow: #f4ad0f;
+        --brand-teal: #009cb6;
+        --brand-teal-20: rgba(0, 156, 182, 0.2);
+        --brand-header: #7ec6e0;
+      }
+      .progress { height: 12px; border-radius: 9999px; background: rgba(0,156,182,0.25); overflow: hidden; }
+      .progress .bar { width: 0%; height: 100%; border-radius: inherit; background: var(--brand-yellow); transition: width .25s; }
+      .logo-badge { border: 1px solid #e5e7eb; border-radius: 8px; padding: 6px; background: #fff; }
+      .logo-badge img { height: 22px; width: auto; }
+      .logos-grid-4 { display:grid; grid-template-columns: repeat(4, 1fr); gap: 8px; align-items:center; justify-items:center; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .scene { position: relative; height: min(16vh, 180px); margin-bottom: 2px; overflow: hidden; border-radius: 10px; display:flex; align-items:flex-end; justify-content:center; }
+      .car-vehicle { position: relative; z-index: 2; }
+      .wheel-rotor { transform-box: fill-box; transform-origin: center; animation: spin .6s linear infinite; }
+      .loading-title { text-align:center; margin-bottom: min(15vh, 90px); }
+      .loading-title .dots{ display:inline-block; overflow:hidden; width:0ch; animation: loadingDots 1.2s steps(3,end) infinite; }
+      .loading-title .dots::after{ content:"..."; }
+      @keyframes loadingDots { from { width:0ch; } to { width:3ch; } }
+      .group-title { background: var(--brand-yellow); padding: 8px 16px; border-radius: 4px; color: #fff; cursor: pointer; margin-top: 12px; }
+      .group-title:hover { background: #e39e0e; }
+      .accordion-content { max-height: 70vh; overflow-y: auto; }
+      @media (min-width: 768px) { .accordion-content { max-height: none; } }
+      .seg { display:flex; align-items:center; gap:8px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px; padding:8px 10px; }
+      .seg-badge { background:#009cb6; color:#fff; font-weight:700; border-radius:6px; padding:4px 8px; min-width:26px; text-align:center; }
+      .seg input, .seg select { background:#fff; border:1px solid #d1d5db; border-radius:6px; padding:6px; width: 100%; }
+      .btn-search { background:#009cb6; color:#fff; font-weight:600; border-radius:8px; padding:10px 20px; }
+      .btn-search:hover { background: var(--brand-yellow); }
+      .date-input { min-width: 150px; }
+      .lowest-badge { background: var(--brand-header); color:#fff; padding:2px 8px; border-radius:9999px; font-size:10px; }
+    </style>
+  </head>
+  <body class="min-h-screen bg-gray-50">
+    <header class="bg-[#009cb6] border-b">
+      <div class="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <a href="/"><img src="/static/ap-heather.png" alt="Auto Prudente" class="h-12 w-auto" /></a>
+        </div>
+        <div class="flex items-center gap-4">
+          <span class="text-white text-sm">admin</span>
+          <form method="post" action="/logout">
+            <button class="text-white/90 hover:text-white text-sm">Logout</button>
+          </form>
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-6xl px-4 py-6">
+      <section class="bg-white rounded-lg shadow p-4">
+        <h2 class="font-medium border-l-4 border-[#f6b511] pl-3 mb-3">Pesquisar por parâmetros</h2>
+        <form id="paramForm" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end" onsubmit="return false">
+          <div class="md:col-span-3 seg">
+            <select id="location" class="w-full">
+              <option value="Aeroporto de Faro">Aeroporto de Faro</option>
+              <option value="Albufeira">Albufeira</option>
+            </select>
+          </div>
+          <div class="md:col-span-2 seg">
+            <input id="startDate" type="date" class="date-input w-full" />
+          </div>
+          <div class="md:col-span-7 seg" style="overflow-x: auto;">
+            <input id="days" type="hidden" value="7" />
+            <div id="daysChips" class="flex gap-1"></div>
+          </div>
+          <div class="md:col-span-12">
+            <button id="fetchAllBtn" type="button" class="btn-search">Pesquisar</button>
+          </div>
+          <input id="startTime" type="hidden" value="10:00" />
+          <input id="endDate" type="hidden" />
+          <input id="endTime" type="hidden" value="10:00" />
+        </form>
+        <div id="results" class="mt-4"></div>
+      </section>
+    </main>
+
+    <div id="loadingModal" class="hidden fixed inset-0 z-50 bg-black/40">
+      <div class="bg-white w-full h-full p-0 overflow-auto">
+        <div class="w-full bg-[#7ec6e0] py-2 px-4">
+          <img src="/static/ap-heather.png" alt="Auto Prudente" class="h-10" />
+        </div>
+        <div class="px-5 md:px-8">
+          <div class="loading-title text-base font-medium text-gray-800">Pesquisando em mais de 1000 locadoras<span class="dots"></span></div>
+          <div class="mx-auto" style="max-width: 520px;">
+            <div class="scene" style="margin-bottom: 0px;">
+              <svg class="car-vehicle" width="312" height="132" viewBox="0 0 260 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <g transform="scale(-1,1) translate(-260,0)">
+                  <rect x="20" y="84" width="220" height="6" rx="3" style="fill:var(--brand-yellow)"/>
+                  <g>
+                    <path d="M48 75 h140 a12 12 0 0 0 12-12 v-10 c0-7-6-13-13-15 l-36-10 a28 28 0 0 0-7-1 h-34 a22 22 0 0 0-14 6 l-18 18 h-18 a12 12 0 0 0-12 12 v7 a6 6 0 0 0 6 6z" style="fill:var(--brand-teal)"/>
+                    <rect x="108" y="40" width="36" height="16" rx="3" fill="#CFEFFF"/>
+                  </g>
+                  <g>
+                    <g class="wheel">
+                      <circle cx="92" cy="75" r="12" fill="#1f2937"/>
+                      <circle cx="92" cy="75" r="4" fill="#9CA3AF"/>
+                      <g class="wheel-rotor">
+                        <rect x="91.5" y="63" width="1" height="6" fill="#fff"/>
+                        <rect x="91.5" y="81" width="1" height="6" fill="#fff"/>
+                        <rect x="80" y="74.5" width="6" height="1" fill="#fff"/>
+                        <rect x="98" y="74.5" width="6" height="1" fill="#fff"/>
+                      </g>
+                    </g>
+                    <g class="wheel">
+                      <circle cx="178" cy="75" r="12" fill="#1f2937"/>
+                      <circle cx="178" cy="75" r="4" fill="#9CA3AF"/>
+                      <g class="wheel-rotor">
+                        <rect x="177.5" y="63" width="1" height="6" fill="#fff"/>
+                        <rect x="177.5" y="81" width="1" height="6" fill="#fff"/>
+                        <rect x="166" y="74.5" width="6" height="1" fill="#fff"/>
+                        <rect x="184" y="74.5" width="6" height="1" fill="#fff"/>
+                      </g>
+                    </g>
+                  </g>
+                </g>
+              </svg>
+            </div>
+          </div>
+          <div class="progress my-3 max-w-lg mx-auto"><div class="bar"></div></div>
+          <div class="mt-2 flex justify-center">
+            <ul class="list-none space-y-1 text-sm text-gray-800 m-0 p-0">
+              <li class="flex items-start gap-2">
+                <svg class="mt-0.5 h-4 w-4 text-green-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0L3.293 9.957a1 1 0 111.414-1.414l3.004 3.004 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                <span>O melhor preço garantido</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <svg class="mt-0.5 h-4 w-4 text-green-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0L3.293 9.957a1 1 0 111.414-1.414l3.004 3.004 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                <span>Rápido e fácil</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <svg class="mt-0.5 h-4 w-4 text-green-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0L3.293 9.957a1 1 0 111.414-1.414l3.004 3.004 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                <span>Mais de <strong>7,9 milhões</strong> de clientes</span>
+              </li>
+            </ul>
+          </div>
+          <div class="border-t border-gray-200 my-3"></div>
+          <div class="mx-auto" style="max-width: 520px;">
+            <div class="logos-grid-4">
+              <div class="logo-badge"><img src="/static/logos/logo_AUP.png" alt="AUP"/></div>
+              <div class="logo-badge"><img src="/static/logos/logo_THR.png.avif" alt="THR"/></div>
+              <div class="logo-badge"><img src="/static/logos/logo_ECR.png.avif" alt="ECR"/></div>
+              <div class="logo-badge"><img src="/static/logos/logo_HER.png" alt="HER"/></div>
+            </div>
+            <div class="logos-grid-4" style="margin-top: 8px;">
+              <div class="logo-badge"><img src="/static/logos/logo_BGX.png.avif" alt="BGX"/></div>
+              <div class="logo-badge"><img src="/static/logos/logo_CEN.png.avif" alt="CEN"/></div>
+              <div class="logo-badge"><img src="/static/logos/logo_OKR.png" alt="OKR"/></div>
+              <div class="logo-badge"><img src="/static/logos/logo_SUR.png" alt="SUR"/></div>
+            </div>
+            <div class="logos-grid-4" style="margin-top: 8px;">
+              <div class="logo-badge"><img src="/static/logos/logo_TAN.png" alt="TAN"/></div>
+              <div class="logo-badge"><img src="/static/logos/logo_TAN1.png" alt="TAN1"/></div>
+              <div class="logo-badge"><img src="/static/logos/logo_YNO.png.avif" alt="YNO"/></div>
+              <div class="logo-badge"><img src="/static/logos/logo_ICT.png" alt="ICT"/></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      function escapeHtml(s) { return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":"'"}[m])); }
+      function fmtDate(d){ const m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0'); return `${d.getFullYear()}-${m}-${day}`; }
+      function toDate(v){ const d=new Date(v); return isNaN(d.getTime())?null:d; }
+      
+      function setupDateMath(){
+        const sd=document.getElementById('startDate'), ed=document.getElementById('endDate'), days=document.getElementById('days');
+        if (!sd || !ed || !days) return;
+        function recompute(){ const n=parseInt(days.value||'0',10), s=toDate(sd.value); if(!s||!n) return; const e=new Date(s); e.setDate(e.getDate()+n); ed.value=fmtDate(e); }
+        ['input','change'].forEach(ev=>{ sd.addEventListener(ev, recompute); days.addEventListener(ev, recompute); });
+        sd.addEventListener('change', ()=>{ try{ sd.blur(); }catch(_){} recompute(); });
+        recompute();
+      }
+      setupDateMath();
+      
+      function setupDaysSelector(){
+        const daysInput=document.getElementById('days'), chipsCont=document.getElementById('daysChips');
+        if (!daysInput || !chipsCont) return;
+        const presets=[1,2,3,4,5,6,7,8,9,14,22,31,60];
+        let selectedDays=parseInt(daysInput.value||'7',10)||7;
+        function onChange(d){ selectedDays=d; daysInput.value=String(d); try{daysInput.dispatchEvent(new Event('input',{bubbles:true}));}catch(_){} renderChips(presets,onChange); }
+        window.selectedDays=selectedDays;
+        function renderChips(list,cb){
+          chipsCont.innerHTML='';
+          list.forEach(d=>{ const btn=document.createElement('button'); btn.className='px-2.5 py-1 rounded-md border text-xs '+(d===selectedDays?'bg-[#f6b511] text-white border-[#f6b511]':'bg-white text-gray-700 border-gray-300 hover:bg-[#f6b511]/10'); btn.textContent=d+'d'; btn.addEventListener('click',e=>{ e.preventDefault(); cb(d); }); chipsCont.appendChild(btn); });
+        }
+        renderChips(presets,onChange);
+      }
+      setupDaysSelector();
+      
+      function toggleSection(id){ const el=document.getElementById(id); if (!el) return; const wasHidden=el.classList.contains('hidden'); document.querySelectorAll('[data-accordion="group"]').forEach(p=>p.classList.add('hidden')); if(wasHidden)el.classList.remove('hidden'); }
+      
+      function toNum(p){ const s=String(p||'').replace(/\s/g,''), m=s.match(/([0-9.,]+)/); if(!m)return Infinity; let n=m[1]; if(n.includes(',')&&n.includes('.')){n=n.replace(/\./g,'').replace(',','.');}else if(n.includes(',')&&!n.includes('.')){n=n.replace(',','.');}const v=parseFloat(n); return isFinite(v)?v:Infinity; }
+      
+      function displayCategory(it){ const car=String(it.car||'').toLowerCase(), cat=String(it.category||'').toLowerCase(); if(/mini.*4.*door/i.test(car))return 'Group B1'; if(/^mini\b(?!.*4.*door)/i.test(car))return'Group B2'; if(/econom(y|ic)/i.test(car)&&/auto/i.test(car))return'Group E2'; if(/econom(y|ic)/i.test(car))return'Group D'; if(/suv/i.test(car)&&/auto/i.test(car))return'Group L1'; if(/suv/i.test(car))return'Group F'; if(/crossover/i.test(car))return'Group J1'; if(/(estate|station.*wagon)/i.test(car)&&/auto/i.test(car))return'Group L2'; if(/(estate|station.*wagon)/i.test(car))return'Group J2'; if(/7.*seater/i.test(car)&&/auto/i.test(car))return'Group M2'; if(/7.*seater/i.test(car))return'Group M1'; if(/9.*seater/i.test(car))return'Group N'; if(/premium|luxury/i.test(car))return'Group G'; return it.category||'Other'; }
+      
+      function groupByCategory(items){ const groups=[{c:'Mini 4 Doors',l:'B1 - Mini 4 Doors'},{c:'Mini',l:'B2 - Mini 5 Doors'},{c:'Economy',l:'D - Economy'},{c:'Mini Automatic',l:'E1 - Mini Automatic'},{c:'Economy Automatic',l:'E2 - Economy Automatic'},{c:'SUV',l:'F - SUV'},{c:'Premium',l:'G - Premium'},{c:'Crossover',l:'J1 - Crossover'},{c:'Estate/Station Wagon',l:'J2 - Station Wagon'},{c:'SUV Automatic',l:'L1 - SUV Automatic'},{c:'Station Wagon Automatic',l:'L2 - Station Wagon Automatic'},{c:'7 Seater',l:'M1 - 7 Seater'},{c:'7 Seater Automatic',l:'M2 - 7 Seater Automatic'},{c:'9 Seater',l:'N - 9 Seater'}]; const map=new Map(); (items||[]).forEach(it=>{const g=displayCategory(it).replace(/^Group\s*/i,''); let key='Other'; groups.forEach(gr=>{if(gr.l.startsWith(g+' ')||gr.l.startsWith(g+'-'))key=gr.c;}); if(!map.has(key))map.set(key,[]); map.get(key).push(it);}); return {groups,map}; }
+      
+      function renderCategoryBlocks(items){ if(!items||items.length===0)return'<p class="text-gray-500 text-center py-4">Nenhum resultado encontrado</p>'; const {groups,map}=groupByCategory(items); let bestCat='',bestVal=Infinity; map.forEach((lst,cat)=>{const m=lst.reduce((acc,it)=>{const v=toNum(it.price); return v<acc?v:acc;},Infinity); if(m<bestVal){bestVal=m;bestCat=cat;}}); const parts=[]; let gi=0; groups.forEach(g=>{const lst=(map.get(g.c)||[]).sort((a,b)=>toNum(a.price)-toNum(b.price)); if(!lst.length)return; const sid=`gs${gi}`; const exp=gi===0; gi++; parts.push(`<div class="group-title flex items-center justify-between" onclick="toggleSection('${sid}')"><span>${escapeHtml(g.l)}</span>${bestCat===g.c?'<span class="lowest-badge">Preço mais baixo</span>':''}</div>`); parts.push(`<div id="${sid}" data-accordion="group" class="${exp?'':'hidden'} accordion-content"><table class="min-w-full divide-y divide-gray-200"><thead class="bg-[#009cb6]"><tr><th class="px-4 py-2 text-left text-xs font-medium text-white">#</th><th class="px-4 py-2 text-left text-xs font-medium text-white">Supplier</th><th class="px-4 py-2 text-left text-xs font-medium text-white">Car</th><th class="px-4 py-2 text-left text-xs font-medium text-white">Category</th><th class="px-4 py-2 text-left text-xs font-medium text-white">Price</th></tr></thead><tbody class="bg-white divide-y">${lst.map((it,i)=>`<tr style="${/auto.*prudente/i.test(it.supplier||'')?'background:var(--brand-teal-20)':''}"><td class="px-4 py-2 text-sm">${i+1}</td><td class="px-4 py-2 text-sm">${escapeHtml(it.supplier||'')}</td><td class="px-4 py-2 text-sm">${escapeHtml(it.car||'')}</td><td class="px-4 py-2 text-sm">${escapeHtml(displayCategory(it))}</td><td class="px-4 py-2 text-sm font-medium">${escapeHtml(it.price||'')}</td></tr>`).join('')}</tbody></table></div>`); }); return parts.join(''); }
+      
+      const fetchAllBtn=document.getElementById('fetchAllBtn');
+      let fetchInFlight=false;
+      async function runBulkFetch(e){
+        e.preventDefault();
+        if (fetchInFlight) return;
+        const results=document.getElementById('results'), locEl=document.getElementById('location'), sdEl=document.getElementById('startDate'), daysEl=document.getElementById('days');
+        const location=(locEl?.value||'').trim(), start_date=sdEl?.value||'', days=parseInt(daysEl?.value||'0',10);
+        if (!location||!start_date||!days){ alert('Preencha todos os campos'); return; }
+        fetchInFlight=true; fetchAllBtn.disabled=true;
+        results.innerHTML='';
+        const modal=document.getElementById('loadingModal'), bar=document.querySelector('#loadingModal .progress .bar');
+        if (modal) modal.classList.remove('hidden');
+        let prog=8; if(bar)bar.style.width=prog+'%';
+        const progTimer=setInterval(()=>{ if(bar&&prog<90){ prog=Math.min(90,prog+(prog<40?3:prog<70?2:1)); bar.style.width=prog+'%'; } },160);
+        try {
+          const body={location,start_date,start_time:'10:00',days,lang:'pt',currency:'EUR'};
+          try{await fetch('/healthz',{credentials:'same-origin',cache:'no-store',keepalive:true});}catch(_){}
+          const resp=await fetch('/api/track-by-params',{method:'POST',headers:{'Content-Type':'application/json'},credentials:'same-origin',cache:'no-store',body:JSON.stringify(body)});
+          const data=await resp.json();
+          if(bar)bar.style.width='100%';
+          const items=Array.isArray(data.items)?data.items:[];
+          console.log('[DEBUG] Total items:', items.length);
+          if(items.length>0){
+            console.log('[DEBUG] Primeiro item:', items[0]);
+            console.log('[DEBUG] Category do 1º:', items[0].category);
+            console.log('[DEBUG] Car do 1º:', items[0].car);
+            items.slice(0,10).forEach((it,i)=>console.log(`[DEBUG] Item ${i}: car="${it.car}" cat="${it.category}"`));
+          }
+          results.innerHTML=`<div class="rounded-md border"><div class="px-4 py-2 bg-gray-50 text-sm font-medium">${days} day(s) — ${escapeHtml(location)}</div><div class="px-4 py-2 bg-gray-50 text-sm font-medium">Agrupado por Categoria</div>${renderCategoryBlocks(items)}</div>`;
+        }catch(err){ alert('Erro: '+err); }
+        finally{ fetchInFlight=false; fetchAllBtn.disabled=false; clearInterval(progTimer); if(modal)setTimeout(()=>{ modal.classList.add('hidden'); if(bar)bar.style.width='0%'; },300); }
+      }
+      if (fetchAllBtn) fetchAllBtn.addEventListener('click',runBulkFetch);
+      const pf=document.getElementById('paramForm'); if(pf){pf.addEventListener('submit',runBulkFetch);pf.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();runBulkFetch(e);}});}
+      try{fetch('/healthz',{credentials:'same-origin',cache:'no-store',keepalive:true}).catch(()=>{});}catch(_){}
+    </script>
+  </body>
+</html>

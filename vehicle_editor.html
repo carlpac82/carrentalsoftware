@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Vehicle Names Editor</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <!-- Header -->
+    <header class="bg-[#009cb6] border-b sticky top-0 z-50">
+        <div class="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
+            <h1 class="text-white text-xl font-bold">Vehicle Names Editor</h1>
+            <div class="flex items-center gap-3 text-white text-sm">
+                <span id="totalVehicles">0</span> vehicles
+                <button onclick="downloadAllPhotos()" class="p-2 hover:bg-white/10 transition-all" title="Download All Photos">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                    </svg>
+                </button>
+                <button onclick="exportConfiguration()" class="p-2 hover:bg-white/10 transition-all" title="Export Config (with photos)">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                    </svg>
+                </button>
+                <button onclick="document.getElementById('importFile').click()" class="p-2 hover:bg-white/10 transition-all" title="Import Config (with photos)">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/>
+                    </svg>
+                </button>
+                <input type="file" id="importFile" accept=".json" style="display:none" onchange="importConfiguration(event)">
+            </div>
+        </div>
+    </header>
+    
+    <main class="mx-auto max-w-7xl px-4 py-6 space-y-6">
+        <!-- Abas -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="border-b">
+                <nav class="flex space-x-4 px-4">
+                    <button onclick="switchTab('all')" id="tabAll" 
+                            class="border-b-2 border-[#009cb6] text-[#009cb6] py-3 px-4 font-semibold">
+                        All Vehicles
+                    </button>
+                    <button onclick="switchTab('uncategorized')" id="tabUncategorized" 
+                            class="border-b-2 border-transparent text-gray-500 hover:text-gray-700 py-3 px-4">
+                        Uncategorized <span id="uncategorizedCount" class="ml-1 bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs"></span>
+                    </button>
+                </nav>
+            </div>
+        </div>
+        
+        <!-- Botões de Gestão -->
+        <div class="bg-gradient-to-r from-blue-50 to-yellow-50 border-2 border-[#009cb6] rounded-lg shadow-lg p-4">
+            <div class="flex items-center justify-between">
+                <div>
+                    <h3 class="text-lg font-bold text-[#009cb6]">Category & Group Management</h3>
+                    <p class="text-sm text-gray-600">Create and manage vehicle categories and groups</p>
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="showNewCategoryModal()" 
+                            class="px-6 py-3 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a8e] font-semibold">
+                        + New Category
+                    </button>
+                    <button onclick="showNewGroupModal()" 
+                            class="px-6 py-3 bg-[#f4ad0f] text-gray-900 rounded-lg hover:bg-[#e39e0e] font-semibold">
+                        + New Group
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Filtros -->
+        <div class="bg-white rounded-lg shadow p-4">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <input type="text" id="searchInput" placeholder="🔍 Search..." 
+                       class="px-4 py-2 border rounded-lg" onkeyup="filterVehicles()">
+                
+                <select id="filterBrand" class="px-4 py-2 border rounded-lg" onchange="filterVehicles()">
+                    <option value="">All brands</option>
+                </select>
+                
+                <select id="filterCategory" class="px-4 py-2 border rounded-lg" onchange="filterVehicles()">
+                    <option value="">All categories</option>
+                </select>
+                
+                <button onclick="loadVehicles()" class="p-2 text-[#009cb6] hover:bg-gray-100 rounded-lg">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Tabela de Veículos -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <div id="vehiclesContainer">
+                    <div class="p-8 text-center text-gray-500">
+                        Loading vehicles...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Modal Nova Categoria -->
+    <div id="newCategoryModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-md w-full p-6">
+            <h2 class="text-xl font-bold mb-4 text-[#009cb6]">Create New Category</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Category Name</label>
+                    <input type="text" id="newCategoryName" placeholder="Ex: Compact Premium" 
+                           class="w-full px-3 py-2 border rounded-lg">
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="saveNewCategory()" class="flex-1 px-4 py-2 bg-[#009cb6] text-white rounded-lg">
+                        Create
+                    </button>
+                    <button onclick="closeNewCategoryModal()" class="px-4 py-2 border rounded-lg">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal Novo Grupo -->
+    <div id="newGroupModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-md w-full p-6">
+            <h2 class="text-xl font-bold mb-4 text-[#009cb6]">Create New Group</h2>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium mb-2">Group Code</label>
+                    <input type="text" id="newGroupCode" placeholder="Ex: P3" maxlength="3"
+                           class="w-full px-3 py-2 border rounded-lg uppercase">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-2">Group Name</label>
+                    <input type="text" id="newGroupName" placeholder="Ex: Premium Plus" 
+                           class="w-full px-3 py-2 border rounded-lg">
+                </div>
+                <div class="flex gap-3">
+                    <button onclick="saveNewGroup()" class="flex-1 px-4 py-2 bg-[#f4ad0f] text-gray-900 rounded-lg">
+                        Create
+                    </button>
+                    <button onclick="closeNewGroupModal()" class="px-4 py-2 border rounded-lg">
+                        Cancel
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Edição -->
+    <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Edit Vehicle</h2>
+                    <button onclick="closeEditModal()" class="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <label class="block text-sm font-medium mb-1">Original Name</label>
+                        <input type="text" id="editOriginalName" readonly 
+                               class="w-full px-3 py-2 border rounded-lg bg-gray-100" />
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Clean Name *</label>
+                        <input type="text" id="editCleanName" 
+                               class="w-full px-3 py-2 border rounded-lg" />
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Category</label>
+                            <select id="editCategory" class="w-full px-3 py-2 border rounded-lg" onchange="updateGroupFromCategory()">
+                                <option value="MINI 4 Lugares">MINI 4 Lugares</option>
+                                <option value="MINI 5 Lugares">MINI 5 Lugares</option>
+                                <option value="MINI Auto">MINI Auto</option>
+                                <option value="ECONOMY">ECONOMY</option>
+                                <option value="ECONOMY Auto">ECONOMY Auto</option>
+                                <option value="SUV">SUV</option>
+                                <option value="SUV Auto">SUV Auto</option>
+                                <option value="Crossover">Crossover</option>
+                                <option value="Station Wagon">Station Wagon</option>
+                                <option value="Station Wagon Auto">Station Wagon Auto</option>
+                                <option value="Cabrio">Cabrio</option>
+                                <option value="Premium">Premium</option>
+                                <option value="Luxury">Luxury</option>
+                                <option value="7 Lugares">7 Lugares</option>
+                                <option value="7 Lugares Auto">7 Lugares Auto</option>
+                                <option value="9 Lugares">9 Lugares</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Group</label>
+                            <select id="editGroup" class="w-full px-3 py-2 border rounded-lg">
+                                <option value="B1">B1 - Mini 4 Doors</option>
+                                <option value="B2">B2 - Mini</option>
+                                <option value="D">D - Economy</option>
+                                <option value="E1">E1 - Mini Auto</option>
+                                <option value="E2">E2 - Economy Auto</option>
+                                <option value="F">F - SUV</option>
+                                <option value="G">G - Cabrio</option>
+                                <option value="X">X - Premium/Luxury</option>
+                                <option value="J1">J1 - Crossover</option>
+                                <option value="J2">J2 - Station Wagon</option>
+                                <option value="L1">L1 - SUV Auto</option>
+                                <option value="L2">L2 - Station Wagon Auto</option>
+                                <option value="M1">M1 - 7 Seater</option>
+                                <option value="M2">M2 - 7 Seater Auto</option>
+                                <option value="N">N - 9 Seater</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Transmission</label>
+                            <select id="editTransmission" class="w-full px-3 py-2 border rounded-lg">
+                                <option value="Manual">Manual</option>
+                                <option value="Automatic">Automatic</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Upload/Download Foto -->
+                    <div class="border-t pt-4">
+                        <label class="block text-sm font-medium mb-2">Vehicle Photo</label>
+                        
+                        <!-- Preview -->
+                        <div id="photoPreview" class="mb-3 hidden">
+                            <img id="photoPreviewImage" src="" alt="Preview" class="h-32 w-auto rounded border">
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <!-- Upload -->
+                            <div>
+                                <label class="block text-xs text-gray-600 mb-1">Upload File</label>
+                                <input type="file" id="photoFile" accept="image/*" 
+                                       class="w-full text-sm border rounded-lg p-2"
+                                       onchange="handlePhotoUpload(event)">
+                            </div>
+                            
+                            <!-- URL -->
+                            <div>
+                                <label class="block text-xs text-gray-600 mb-1">Or paste URL</label>
+                                <div class="flex gap-2">
+                                    <input type="url" id="photoUrl" 
+                                           placeholder="https://..." 
+                                           class="flex-1 px-3 py-2 border rounded-lg text-sm">
+                                    <button type="button" onclick="downloadPhotoFromUrl()" 
+                                            class="px-3 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a8e] text-sm">
+                                        📥
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-3 pt-4">
+                        <button onclick="saveEdit()" class="flex-1 px-4 py-2 bg-[#009cb6] text-white rounded-lg">
+                            💾 Save
+                        </button>
+                        <button onclick="closeEditModal()" class="px-4 py-2 border rounded-lg">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let allVehicles = [];
+        let uncategorizedVehicles = [];
+        let currentTab = 'all';
+        let editingVehicle = null;
+        
+        const categoryToGroup = {
+            'MINI 4 Lugares': 'B1',
+            'MINI 5 Lugares': 'B2',
+            'MINI Auto': 'E1',
+            'ECONOMY': 'D',
+            'ECONOMY Auto': 'E2',
+            'SUV': 'F',
+            'SUV Auto': 'L1',
+            'Crossover': 'J1',
+            'Station Wagon': 'J2',
+            'Station Wagon Auto': 'L2',
+            'Cabrio': 'G',
+            'Premium': 'X',
+            'Luxury': 'X',
+            '7 Lugares': 'M1',
+            '7 Lugares Auto': 'M2',
+            '9 Lugares': 'N'
+        };
+        
+        async function loadVehicles() {
+            try {
+                const response = await fetch('/api/vehicles/with-originals');
+                const data = await response.json();
+                
+                if (!data.ok) throw new Error(data.error);
+                
+                allVehicles = Object.entries(data.vehicles).map(([clean, info]) => {
+                    const parts = clean.split(' ');
+                    const brand = parts[0] || '';
+                    const model = parts.slice(1).join(' ') || '';
+                    return {
+                        clean: clean,
+                        original: info.original || clean,
+                        category: info.category || 'Unknown',
+                        brand: brand,
+                        model: model
+                    };
+                });
+                
+                document.getElementById('totalVehicles').textContent = allVehicles.length;
+                populateFilters();
+                await loadUncategorized();
+                renderVehicles();
+                
+            } catch (error) {
+                console.error('Error:', error);
+                alert('Error loading vehicles: ' + error.message);
+            }
+        }
+        
+        async function loadUncategorized() {
+            try {
+                const response = await fetch('/api/vehicles/uncategorized');
+                const data = await response.json();
+                
+                if (data.ok) {
+                    uncategorizedVehicles = data.uncategorized || [];
+                    document.getElementById('uncategorizedCount').textContent = uncategorizedVehicles.length || '';
+                }
+            } catch (error) {
+                console.error('Error loading uncategorized:', error);
+            }
+        }
+        
+        function populateFilters() {
+            const brands = [...new Set(allVehicles.map(v => v.brand))].sort();
+            const brandSelect = document.getElementById('filterBrand');
+            brandSelect.innerHTML = '<option value="">All brands</option>';
+            brands.forEach(brand => {
+                brandSelect.innerHTML += `<option value="${brand}">${brand.charAt(0).toUpperCase() + brand.slice(1)}</option>`;
+            });
+            
+            const categories = [...new Set(allVehicles.map(v => v.category))].sort();
+            const catSelect = document.getElementById('filterCategory');
+            catSelect.innerHTML = '<option value="">All categories</option>';
+            categories.forEach(cat => {
+                catSelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+            });
+        }
+        
+        function filterVehicles() {
+            renderVehicles();
+        }
+        
+        function renderVehicles() {
+            const container = document.getElementById('vehiclesContainer');
+            let vehicles = currentTab === 'all' ? allVehicles : uncategorizedVehicles;
+            
+            // Aplicar filtros
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const brandFilter = document.getElementById('filterBrand').value;
+            const catFilter = document.getElementById('filterCategory').value;
+            
+            vehicles = vehicles.filter(v => {
+                if (search && !v.clean.includes(search) && !v.category.toLowerCase().includes(search)) return false;
+                if (brandFilter && v.brand !== brandFilter) return false;
+                if (catFilter && v.category !== catFilter) return false;
+                return true;
+            });
+            
+            // Agrupar por marca
+            const byBrand = {};
+            vehicles.forEach(v => {
+                if (!byBrand[v.brand]) byBrand[v.brand] = [];
+                byBrand[v.brand].push(v);
+            });
+            
+            // Renderizar
+            container.innerHTML = '';
+            Object.keys(byBrand).sort().forEach(brand => {
+                const brandVehicles = byBrand[brand];
+                const brandDiv = document.createElement('div');
+                brandDiv.className = 'mb-6';
+                brandDiv.innerHTML = `
+                    <div class="bg-[#009cb6] px-6 py-4 border-b-4 border-[#f4ad0f]">
+                        <h3 class="text-xl font-bold capitalize text-white">${brand} <span class="text-sm font-normal bg-[#f4ad0f] text-gray-900 px-3 py-1 rounded-full">${brandVehicles.length} vehicles</span></h3>
+                    </div>
+                    <table class="min-w-full">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Photo</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Original Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Clean Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Group</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Category</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-200">
+                            ${brandVehicles.map(v => {
+                                const group = categoryToGroup[v.category] || '—';
+                                const photoUrl = '/api/vehicles/' + encodeURIComponent(v.clean) + '/photo?t=' + Date.now();
+                                const fallbackSvg = 'data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2760%27 height=%2740%27%3E%3Crect width=%2760%27 height=%2740%27 fill=%27%23e5e7eb%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 dominant-baseline=%27middle%27 text-anchor=%27middle%27 fill=%27%23999%27 font-size=%2712%27%3E🚗%3C/text%3E%3C/svg%3E';
+                                return `
+                                    <tr class="hover:bg-gray-50">
+                                        <td class="px-6 py-4">
+                                            <img src="${photoUrl}" 
+                                                 onerror="this.src='${fallbackSvg}'" 
+                                                 alt="${v.clean}" 
+                                                 class="h-12 w-auto rounded border shadow-sm">
+                                        </td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">${v.original}</td>
+                                        <td class="px-6 py-4 text-sm font-semibold text-blue-600">${v.clean.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}</td>
+                                        <td class="px-6 py-4"><span class="px-2 py-1 text-xs font-mono rounded bg-[#f4ad0f] text-gray-900 font-bold">${group}</span></td>
+                                        <td class="px-6 py-4 text-sm text-gray-500">${v.category}</td>
+                                        <td class="px-6 py-4">
+                                            <button onclick='editVehicle(${JSON.stringify(v)})' class="text-[#009cb6] hover:text-[#007a8e]">
+                                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                                </svg>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                `;
+                container.appendChild(brandDiv);
+            });
+        }
+        
+        function switchTab(tab) {
+            currentTab = tab;
+            document.getElementById('tabAll').className = tab === 'all' 
+                ? 'border-b-2 border-[#009cb6] text-[#009cb6] py-3 px-4 font-semibold'
+                : 'border-b-2 border-transparent text-gray-500 hover:text-gray-700 py-3 px-4';
+            document.getElementById('tabUncategorized').className = tab === 'uncategorized' 
+                ? 'border-b-2 border-[#009cb6] text-[#009cb6] py-3 px-4 font-semibold'
+                : 'border-b-2 border-transparent text-gray-500 hover:text-gray-700 py-3 px-4';
+            renderVehicles();
+        }
+        
+        function editVehicle(vehicle) {
+            editingVehicle = vehicle;
+            document.getElementById('editOriginalName').value = vehicle.original;
+            document.getElementById('editCleanName').value = vehicle.clean;
+            document.getElementById('editCategory').value = vehicle.category;
+            document.getElementById('editGroup').value = categoryToGroup[vehicle.category] || 'D';
+            
+            // Detectar transmission baseado na categoria ou nome
+            const isAuto = vehicle.category.toLowerCase().includes('auto') || 
+                          vehicle.clean.toLowerCase().includes('auto');
+            document.getElementById('editTransmission').value = isAuto ? 'Automatic' : 'Manual';
+            
+            // Carregar foto se existir
+            loadVehiclePhoto(vehicle.clean);
+            
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+        
+        async function loadVehiclePhoto(vehicleName) {
+            const photoUrl = `/api/vehicles/${encodeURIComponent(vehicleName)}/photo?t=${Date.now()}`;
+            const preview = document.getElementById('photoPreview');
+            const previewImage = document.getElementById('photoPreviewImage');
+            const urlInput = document.getElementById('photoUrl');
+            
+            try {
+                const response = await fetch(photoUrl);
+                if (response.ok) {
+                    previewImage.src = photoUrl;
+                    preview.classList.remove('hidden');
+                    
+                    // Tentar obter URL original
+                    try {
+                        const metaResponse = await fetch(`/api/vehicles/${encodeURIComponent(vehicleName)}/photo/metadata`);
+                        if (metaResponse.ok) {
+                            const metadata = await metaResponse.json();
+                            if (metadata.ok && metadata.source_url) {
+                                urlInput.value = metadata.source_url;
+                            }
+                        }
+                    } catch (err) {
+                        console.log('No metadata');
+                    }
+                } else {
+                    preview.classList.add('hidden');
+                    urlInput.value = '';
+                }
+            } catch (error) {
+                preview.classList.add('hidden');
+                urlInput.value = '';
+            }
+        }
+        
+        async function handlePhotoUpload(event) {
+            const file = event.target.files[0];
+            if (!file || !editingVehicle) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch(`/api/vehicles/${encodeURIComponent(editingVehicle.clean)}/photo/upload`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                if (data.ok) {
+                    alert('✅ Photo uploaded!');
+                    await loadVehiclePhoto(editingVehicle.clean);
+                    renderVehicles(); // Atualizar tabela
+                } else {
+                    alert('❌ Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+        
+        async function downloadPhotoFromUrl() {
+            const url = document.getElementById('photoUrl').value.trim();
+            if (!url || !editingVehicle) {
+                alert('Enter a valid URL!');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/vehicles/${encodeURIComponent(editingVehicle.clean)}/photo/from-url`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ url: url })
+                });
+                
+                const data = await response.json();
+                if (data.ok) {
+                    alert('✅ Photo downloaded!');
+                    await loadVehiclePhoto(editingVehicle.clean);
+                    renderVehicles(); // Atualizar tabela
+                } else {
+                    alert('❌ Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+        
+        function updateGroupFromCategory() {
+            const category = document.getElementById('editCategory').value;
+            const group = categoryToGroup[category] || 'D';
+            document.getElementById('editGroup').value = group;
+        }
+        
+        function closeEditModal() {
+            document.getElementById('editModal').classList.add('hidden');
+            editingVehicle = null;
+        }
+        
+        async function saveEdit() {
+            const cleanName = document.getElementById('editCleanName').value.toLowerCase().trim();
+            const category = document.getElementById('editCategory').value;
+            
+            if (!cleanName || !category) {
+                alert('Fill in clean name and category!');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/api/vehicles/save', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        original_name: editingVehicle.original,
+                        clean_name: cleanName,
+                        category: category
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    alert('✅ Vehicle saved!\n\ncarjet_direct.py updated automatically.\nChanges will appear in next search.');
+                    closeEditModal();
+                    await loadVehicles();
+                } else {
+                    alert('❌ Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            }
+        }
+        
+        function showNewCategoryModal() {
+            document.getElementById('newCategoryModal').classList.remove('hidden');
+        }
+        
+        function closeNewCategoryModal() {
+            document.getElementById('newCategoryModal').classList.add('hidden');
+        }
+        
+        function saveNewCategory() {
+            const name = document.getElementById('newCategoryName').value.trim();
+            if (!name) {
+                alert('Enter a category name!');
+                return;
+            }
+            
+            const select = document.getElementById('editCategory');
+            const option = document.createElement('option');
+            option.value = name;
+            option.textContent = name;
+            select.appendChild(option);
+            
+            alert(`✅ Category "${name}" created!`);
+            closeNewCategoryModal();
+        }
+        
+        function showNewGroupModal() {
+            document.getElementById('newGroupModal').classList.remove('hidden');
+        }
+        
+        function closeNewGroupModal() {
+            document.getElementById('newGroupModal').classList.add('hidden');
+        }
+        
+        function saveNewGroup() {
+            const code = document.getElementById('newGroupCode').value.trim().toUpperCase();
+            const name = document.getElementById('newGroupName').value.trim();
+            
+            if (!code || !name) {
+                alert('Fill in code and name!');
+                return;
+            }
+            
+            const select = document.getElementById('editGroup');
+            const option = document.createElement('option');
+            option.value = code;
+            option.textContent = `${code} - ${name}`;
+            select.appendChild(option);
+            
+            alert(`✅ Group "${code} - ${name}" created!`);
+            closeNewGroupModal();
+        }
+        
+        async function downloadAllPhotos() {
+            if (!confirm('📸 Download all vehicle photos?\n\nThis may take a few minutes.')) {
+                return;
+            }
+            
+            const btn = event.target.closest('button');
+            const originalHTML = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = '<svg class="w-5 h-5 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>';
+            
+            try {
+                const response = await fetch('/api/vehicles/images/download', {
+                    method: 'POST'
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    alert(`✅ Download complete!\n\nDownloaded: ${data.downloaded}\nAlready existed: ${data.skipped}\nErrors: ${data.errors?.length || 0}`);
+                    
+                    // Recarregar tabela para mostrar as fotos
+                    renderVehicles();
+                } else {
+                    alert('❌ Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('❌ Error: ' + error.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = originalHTML;
+            }
+        }
+        
+        async function exportConfiguration() {
+            try {
+                const response = await fetch('/api/export/config');
+                
+                if (!response.ok) {
+                    throw new Error('Export failed');
+                }
+                
+                // Download do ficheiro
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                
+                // Obter nome do ficheiro do header
+                const contentDisposition = response.headers.get('Content-Disposition');
+                const filename = contentDisposition 
+                    ? contentDisposition.split('filename=')[1]?.replace(/"/g, '') 
+                    : 'vehicles_config.json';
+                
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                alert('✅ Configuration exported successfully!\nIncludes: vehicles, photos, categories');
+            } catch (error) {
+                alert('❌ Export error: ' + error.message);
+            }
+        }
+        
+        async function importConfiguration(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            if (!confirm('⚠️ Import configuration?\n\nThis will update vehicles and photos.')) {
+                event.target.value = '';
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('/api/import/config', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    alert(`✅ Import completed!\n\nVehicles: ${data.vehicles_count}\nPhotos: ${data.photos_imported || 0}`);
+                    
+                    // Recarregar dados
+                    await loadVehicles();
+                } else {
+                    alert('❌ Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('❌ Import error: ' + error.message);
+            } finally {
+                event.target.value = '';
+            }
+        }
+        
+        // Load on start
+        window.addEventListener('DOMContentLoaded', loadVehicles);
+    </script>
+</body>
+</html>

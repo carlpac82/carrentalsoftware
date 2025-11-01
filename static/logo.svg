@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180" height="36" viewBox="0 0 180 36" role="img" aria-label="Carjet Rental Price Tracker">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#009cb6"/>
+      <stop offset="100%" stop-color="#005e6e"/>
+    </linearGradient>
+  </defs>
+  <rect x="0" y="0" width="36" height="36" rx="8" fill="url(#g)"/>
+  <circle cx="18" cy="18" r="8" fill="#f6b511"/>
+  <g transform="translate(44,9)">
+    <text x="0" y="12" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-weight="700" font-size="14" fill="#009cb6">Carjet</text>
+    <text x="0" y="26" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif" font-weight="600" font-size="11" fill="#6b7280">Price Tracker</text>
+  </g>
+</svg>

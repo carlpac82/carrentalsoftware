@@ -1,0 +1,83 @@
+# Adicionar ao final do main.py (linha 8227):
+
+# --- API: Sync Suppliers ---
+@app.post("/api/suppliers/sync")
+async def api_suppliers_sync(request: Request):
+    """Sincronizar suppliers do JavaScript com a base de dados"""
+    try:
+        require_auth(request)
+        
+        data = await request.json()
+        suppliers = data.get("suppliers", [])
+        
+        if not suppliers:
+            return _no_store_json({"ok": False, "error": "No suppliers provided"}, 400)
+        
+        with _db_lock:
+            con = _db_connect()
+            try:
+                synced = 0
+                for supplier in suppliers:
+                    code = supplier.get("code")
+                    name = supplier.get("name")
+                    logo_path = supplier.get("logo_path")
+                    aliases = ",".join(supplier.get("aliases", []))
+                    
+                    if not code or not name:
+                        continue
+                    
+                    con.execute('''
+                        INSERT OR REPLACE INTO suppliers (code, name, logo_path, aliases, active, updated_at)
+                        VALUES (?, ?, ?, ?, 1, datetime('now'))
+                    ''', (code, name, logo_path, aliases))
+                    synced += 1
+                
+                con.commit()
+                
+                return _no_store_json({
+                    "ok": True,
+                    "synced": synced,
+                    "message": f"{synced} suppliers sincronizados"
+                })
+            finally:
+                con.close()
+    except Exception as e:
+        import traceback
+        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+
+
+@app.get("/api/suppliers")
+async def api_suppliers_get(request: Request):
+    """Obter todos os suppliers da base de dados"""
+    try:
+        require_auth(request)
+        
+        with _db_lock:
+            con = _db_connect()
+            try:
+                cursor = con.execute('''
+                    SELECT code, name, logo_path, aliases, active
+                    FROM suppliers
+                    WHERE active = 1
+                    ORDER BY name
+                ''')
+                
+                suppliers = []
+                for row in cursor.fetchall():
+                    suppliers.append({
+                        "code": row[0],
+                        "name": row[1],
+                        "logo_path": row[2],
+                        "aliases": row[3].split(",") if row[3] else [],
+                        "active": row[4]
+                    })
+                
+                return _no_store_json({
+                    "ok": True,
+                    "suppliers": suppliers,
+                    "total": len(suppliers)
+                })
+            finally:
+                con.close()
+    except Exception as e:
+        return _no_store_json({"ok": False, "error": str(e)}, 500)

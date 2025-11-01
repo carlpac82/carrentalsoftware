@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Editor de Veículos</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+    <header class="bg-[#009cb6] border-b sticky top-0 z-50">
+        <div class="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="/" class="text-white font-semibold hover:underline">← Voltar</a>
+                <h1 class="text-white text-xl font-bold">Editor de Nomes de Veículos</h1>
+            </div>
+            <div class="flex items-center gap-4 text-white text-sm">
+                <span id="totalVehicles">0</span> veículos
+                <button onclick="exportConfiguration()" class="px-3 py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold">
+                    📤 Exportar Config
+                </button>
+                <button onclick="document.getElementById('importFile').click()" class="px-3 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg font-semibold">
+                    📥 Importar Config
+                </button>
+                <input type="file" id="importFile" accept=".json" class="hidden" onchange="importConfiguration(event)">
+                <button onclick="saveAllChanges()" class="px-4 py-2 bg-[#f4ad0f] hover:bg-[#e39e0e] rounded-lg font-semibold">
+                    💾 Exportar VEHICLES
+                </button>
+            </div>
+        </div>
+    </header>
+    
+    <main class="mx-auto max-w-7xl px-4 py-6 space-y-6">
+        <!-- Abas -->
+        <div class="bg-white rounded-lg shadow">
+            <div class="border-b">
+                <nav class="flex space-x-4 px-4" aria-label="Tabs">
+                    <button onclick="switchTab('all')" id="tabAll" 
+                            class="tab-button border-b-2 border-[#009cb6] text-[#009cb6] py-3 px-4 font-semibold">
+                        Todos os Veículos
+                    </button>
+                    <button onclick="switchTab('uncategorized')" id="tabUncategorized" 
+                            class="tab-button border-b-2 border-transparent text-gray-500 hover:text-gray-700 py-3 px-4">
+                        Não Categorizados <span id="uncategorizedCount" class="ml-1 bg-red-100 text-red-800 px-2 py-1 rounded-full text-xs"></span>
+                    </button>
+                </nav>
+            </div>
+        </div>
+        
+        <!-- Filtros -->
+        <div class="bg-white rounded-lg shadow p-4" id="filtersSection">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                <input type="text" id="searchInput" placeholder="🔍 Buscar..." 
+                       class="px-4 py-2 border rounded-lg">
+                
+                <select id="filterBrand" class="px-4 py-2 border rounded-lg">
+                    <option value="">Todas as marcas</option>
+                </select>
+                
+                <select id="filterCategory" class="px-4 py-2 border rounded-lg">
+                    <option value="">Todas as categorias</option>
+                </select>
+                
+                <button onclick="loadVehicles()" class="px-4 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a8e]">
+                    🔄 Recarregar
+                </button>
+                
+                <button onclick="autoDownloadPhotos()" class="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700">
+                    📥 Download Fotos
+                </button>
+            </div>
+        </div>
+        
+        <!-- Índice de Marcas -->
+        <div id="brandsIndex" class="bg-white rounded-lg shadow p-4 hidden">
+            <h3 class="font-semibold mb-3">Navegar por Marca:</h3>
+            <div id="brandsIndexContent" class="flex flex-wrap gap-2">
+                <!-- Botões de marcas serão inseridos aqui -->
+            </div>
+        </div>
+        
+        <!-- Tabela de Veículos -->
+        <div class="bg-white rounded-lg shadow overflow-hidden">
+            <div class="overflow-x-auto">
+                <div id="vehiclesContainer">
+                    <!-- Tabelas agrupadas por marca serão inseridas aqui -->
+                </div>
+            </div>
+        </div>
+    </main>
+    
+    <!-- Modal de Edição -->
+    <div id="editModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-3xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Editar Veículo</h2>
+                    <button onclick="closeModal()" class="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
+                </div>
+                
+                <form class="space-y-4">
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <label class="block text-sm font-medium mb-1">Nome Original (do scraping)</label>
+                        <input type="text" id="editOriginalName" readonly 
+                               class="w-full px-3 py-2 border rounded-lg bg-gray-100 text-gray-600" />
+                        <p class="text-xs text-gray-500 mt-1">Este é o nome que vem do CarJet (não editável)</p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Nome Editado (limpo) *</label>
+                        <input type="text" id="editCleanName" 
+                               class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" 
+                               placeholder="Ex: peugeot 3008" />
+                        <p class="text-xs text-gray-500 mt-1">Este é o nome que será usado no sistema (sempre em lowercase)</p>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Marca</label>
+                            <input type="text" id="editBrand" 
+                                   class="w-full px-3 py-2 border rounded-lg" 
+                                   placeholder="Ex: peugeot" />
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium mb-1">Modelo</label>
+                            <input type="text" id="editModel" 
+                                   class="w-full px-3 py-2 border rounded-lg" 
+                                   placeholder="Ex: 3008" />
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-sm font-medium">Categoria</label>
+                                <button type="button" onclick="showNewCategoryInput()" 
+                                        class="text-xs text-[#009cb6] hover:text-[#007a8e] font-semibold">
+                                    + Nova
+                                </button>
+                            </div>
+                            <select id="editCategory" class="w-full px-3 py-2 border rounded-lg">
+                                <option value="MINI 4 Portas">MINI 4 Portas</option>
+                                <option value="MINI 5 Portas">MINI 5 Portas</option>
+                                <option value="MINI Auto">MINI Auto</option>
+                                <option value="ECONOMY">ECONOMY</option>
+                                <option value="ECONOMY Auto">ECONOMY Auto</option>
+                                <option value="SUV">SUV</option>
+                                <option value="SUV Auto">SUV Auto</option>
+                                <option value="Crossover">Crossover</option>
+                                <option value="Premium">Premium</option>
+                                <option value="Station Wagon">Station Wagon</option>
+                                <option value="Station Wagon Auto">Station Wagon Auto</option>
+                                <option value="7 Lugares">7 Lugares</option>
+                                <option value="7 Lugares Auto">7 Lugares Auto</option>
+                                <option value="9 Lugares">9 Lugares</option>
+                            </select>
+                            <input type="text" id="newCategoryInput" placeholder="Nome da nova categoria" 
+                                   class="hidden w-full mt-2 px-3 py-2 border rounded-lg" />
+                        </div>
+                        
+                        <div>
+                            <div class="flex justify-between items-center mb-1">
+                                <label class="block text-sm font-medium">Grupo</label>
+                                <button type="button" onclick="showNewGroupInput()" 
+                                        class="text-xs text-[#009cb6] hover:text-[#007a8e] font-semibold">
+                                    + Novo
+                                </button>
+                            </div>
+                            <select id="editGroup" class="w-full px-3 py-2 border rounded-lg">
+                                <option value="B1">B1 - Mini 4 Doors</option>
+                                <option value="B2">B2 - Mini 5 Doors</option>
+                                <option value="D">D - Economy</option>
+                                <option value="E1">E1 - Mini Automatic</option>
+                                <option value="E2">E2 - Economy Automatic</option>
+                                <option value="F">F - SUV</option>
+                                <option value="G">G - Premium</option>
+                                <option value="J1">J1 - Crossover</option>
+                                <option value="J2">J2 - Station Wagon</option>
+                                <option value="L1">L1 - SUV Automatic</option>
+                                <option value="L2">L2 - Station Wagon Automatic</option>
+                                <option value="M1">M1 - 7 Seater</option>
+                                <option value="M2">M2 - 7 Seater Automatic</option>
+                                <option value="N">N - 9 Seater</option>
+                            </select>
+                            <input type="text" id="newGroupInput" placeholder="Código do novo grupo (ex: P1)" 
+                                   class="hidden w-full mt-2 px-3 py-2 border rounded-lg" />
+                        </div>
+                    </div>
+                    
+                    <div class="border-t pt-4">
+                        <label class="block text-sm font-medium mb-2">Foto do Veículo</label>
+                        
+                        <!-- Preview da foto -->
+                        <div id="photoPreview" class="mb-3 hidden">
+                            <img id="photoPreviewImage" src="" alt="Preview" class="h-32 w-auto rounded border">
+                        </div>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            <!-- Upload de ficheiro -->
+                            <div>
+                                <label class="block text-xs text-gray-600 mb-1">Upload de Ficheiro</label>
+                                <input type="file" id="photoFile" accept="image/*" 
+                                       class="w-full text-sm border rounded-lg p-2">
+                            </div>
+                            
+                            <!-- URL da foto -->
+                            <div>
+                                <label class="block text-xs text-gray-600 mb-1">Ou colar URL</label>
+                                <div class="flex gap-2">
+                                    <input type="url" id="photoUrl" 
+                                           placeholder="https://www.carjet.com/cdn/img/..." 
+                                           class="flex-1 px-3 py-2 border rounded-lg text-sm">
+                                    <button type="button" onclick="downloadPhotoFromUrl()" 
+                                            class="px-3 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a8e] text-sm whitespace-nowrap">
+                                        📥 Baixar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <p class="text-xs text-gray-500 mt-2">
+                            A foto será salva na base de dados. Formatos: JPG, PNG, WebP
+                        </p>
+                    </div>
+                    
+                    <div class="bg-blue-50 border border-blue-200 rounded p-3">
+                        <p class="text-sm text-blue-800">
+                            💡 <strong>Dica:</strong> O nome editado será usado como chave no dicionário VEHICLES. 
+                            Use sempre lowercase e mantenha consistência.
+                        </p>
+                    </div>
+                    
+                    <div class="flex gap-3">
+                        <button type="button" onclick="saveEdit()" 
+                                class="flex-1 px-4 py-2 bg-[#009cb6] text-white rounded-lg hover:bg-[#007a8e]">
+                            💾 Salvar Alterações
+                        </button>
+                        <button type="button" onclick="closeModal()" 
+                                class="px-4 py-2 border rounded-lg hover:bg-gray-50">
+                            Cancelar
+                        </button>
+                    </div>
+                </form>
+                
+                <div id="codePreview" class="hidden mt-4 border-t pt-4">
+                    <label class="block text-sm font-medium mb-2">Código gerado:</label>
+                    <pre class="bg-gray-900 text-green-400 p-3 rounded text-xs overflow-x-auto"><code id="generatedCode"></code></pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Exportação -->
+    <div id="exportModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+            <div class="p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-bold">Exportar VEHICLES</h2>
+                    <button onclick="closeExportModal()" class="text-gray-500 hover:text-gray-700 text-2xl">✕</button>
+                </div>
+                
+                <p class="text-sm text-gray-600 mb-4">
+                    Copie este código e substitua o dicionário VEHICLES em <code class="bg-gray-100 px-2 py-1 rounded">carjet_direct.py</code>
+                </p>
+                
+                <pre class="bg-gray-900 text-green-400 p-4 rounded text-xs overflow-x-auto max-h-96"><code id="fullExportCode"></code></pre>
+                
+                <div class="flex gap-3 mt-4">
+                    <button onclick="copyExportCode()" 
+                            class="flex-1 px-4 py-2 bg-[#f4ad0f] text-white rounded-lg hover:bg-[#e39e0e]">
+                        📋 Copiar Tudo
+                    </button>
+                    <button onclick="closeExportModal()" 
+                            class="px-4 py-2 border rounded-lg hover:bg-gray-50">
+                        Fechar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        let vehiclesData = [];
+        let uncategorizedData = [];
+        let editingIndex = -1;
+        let currentTab = 'all';
+        
+        // Mapeamento entre categoria e grupo
+        const categoryToGroup = {
+            'MINI 4 Portas': 'B1',
+            'MINI 5 Portas': 'B2',
+            'MINI Auto': 'E1',
+            'ECONOMY': 'D',
+            'ECONOMY Auto': 'E2',
+            'SUV': 'F',
+            'SUV Auto': 'L1',
+            'Crossover': 'J1',
+            'Premium': 'G',
+            'Station Wagon': 'J2',
+            'Station Wagon Auto': 'L2',
+            '7 Lugares': 'M1',
+            '7 Lugares Auto': 'M2',
+            '9 Lugares': 'N'
+        };
+        
+        async function loadVehicles() {
+            try {
+                const response = await fetch('/api/vehicles/with-originals');
+                const data = await response.json();
+                
+                if (!data.ok) throw new Error(data.error);
+                
+                // Processar veículos
+                vehiclesData = Object.entries(data.vehicles).map(([cleanName, vehicleData]) => {
+                    // Extrair marca e modelo do nome limpo
+                    const parts = cleanName.split(' ');
+                    const brand = parts[0] || '';
+                    const model = parts.slice(1).join(' ') || '';
+                    
+                    return {
+                        original: vehicleData.original,
+                        clean: cleanName,
+                        brand: brand,
+                        model: model,
+                        category: vehicleData.category
+                    };
+                });
+                
+                // Atualizar contador
+                document.getElementById('totalVehicles').textContent = vehiclesData.length;
+                
+                // Popular dropdowns
+                populateFilters();
+                
+                // Carregar não categorizados
+                await loadUncategorized();
+                
+                // Renderizar tabela
+                renderTable();
+                
+            } catch (error) {
+                alert('Erro ao carregar: ' + error.message);
+            }
+        }
+        
+        async function loadUncategorized() {
+            try {
+                const response = await fetch('/api/vehicles/uncategorized');
+                const data = await response.json();
+                
+                if (data.ok) {
+                    uncategorizedData = data.uncategorized;
+                    document.getElementById('uncategorizedCount').textContent = uncategorizedData.length || '';
+                }
+            } catch (error) {
+                console.error('Erro ao carregar não categorizados:', error);
+            }
+        }
+        
+        function switchTab(tab) {
+            currentTab = tab;
+            
+            // Atualizar visual das abas
+            document.getElementById('tabAll').className = tab === 'all' 
+                ? 'tab-button border-b-2 border-[#009cb6] text-[#009cb6] py-3 px-4 font-semibold'
+                : 'tab-button border-b-2 border-transparent text-gray-500 hover:text-gray-700 py-3 px-4';
+            
+            document.getElementById('tabUncategorized').className = tab === 'uncategorized' 
+                ? 'tab-button border-b-2 border-[#009cb6] text-[#009cb6] py-3 px-4 font-semibold'
+                : 'tab-button border-b-2 border-transparent text-gray-500 hover:text-gray-700 py-3 px-4';
+            
+            // Mostrar/ocultar filtros (não categorizados não precisa de filtros complexos)
+            document.getElementById('filtersSection').style.display = tab === 'all' ? 'block' : 'none';
+            
+            // Renderizar
+            renderTable();
+        }
+        
+        function populateFilters() {
+            // Marcas únicas
+            const brands = [...new Set(vehiclesData.map(v => v.brand))].sort();
+            const brandSelect = document.getElementById('filterBrand');
+            brandSelect.innerHTML = '<option value="">Todas as marcas</option>';
+            brands.forEach(brand => {
+                brandSelect.innerHTML += `<option value="${brand}">${brand.charAt(0).toUpperCase() + brand.slice(1)}</option>`;
+            });
+            
+            // Categorias únicas
+            const categories = [...new Set(vehiclesData.map(v => v.category))].sort();
+            const catSelect = document.getElementById('filterCategory');
+            catSelect.innerHTML = '<option value="">Todas as categorias</option>';
+            categories.forEach(cat => {
+                catSelect.innerHTML += `<option value="${cat}">${cat}</option>`;
+            });
+        }
+        
+        function renderTable() {
+            let filtered = [];
+            
+            if (currentTab === 'uncategorized') {
+                // Mostrar não categorizados
+                const search = document.getElementById('searchInput') ? document.getElementById('searchInput').value.toLowerCase() : '';
+                filtered = uncategorizedData.filter(v => {
+                    if (search && !v.original.toLowerCase().includes(search) && !v.clean.includes(search)) return false;
+                    return true;
+                }).map(v => ({
+                    original: v.original,
+                    clean: v.clean,
+                    brand: v.brand,
+                    model: v.model,
+                    category: v.suggested_category + ' (sugestão)',
+                    isUncategorized: true
+                }));
+            } else {
+                // Mostrar todos (categorizados)
+                const search = document.getElementById('searchInput').value.toLowerCase();
+                const brandFilter = document.getElementById('filterBrand').value;
+                const catFilter = document.getElementById('filterCategory').value;
+                
+                filtered = vehiclesData.filter(v => {
+                    if (search && !v.original.toLowerCase().includes(search) && !v.clean.includes(search)) return false;
+                    if (brandFilter && v.brand !== brandFilter) return false;
+                    if (catFilter && v.category !== catFilter) return false;
+                    return true;
+                });
+            }
+            
+            // Ordenar por marca, depois modelo
+            filtered.sort((a, b) => {
+                if (a.brand !== b.brand) return a.brand.localeCompare(b.brand);
+                return a.model.localeCompare(b.model);
+            });
+            
+            // Agrupar por marca
+            const byBrand = {};
+            filtered.forEach(vehicle => {
+                if (!byBrand[vehicle.brand]) {
+                    byBrand[vehicle.brand] = [];
+                }
+                byBrand[vehicle.brand].push(vehicle);
+            });
+            
+            // Criar índice de marcas
+            const brandsIndex = document.getElementById('brandsIndex');
+            const brandsIndexContent = document.getElementById('brandsIndexContent');
+            
+            if (Object.keys(byBrand).length > 1 && currentTab === 'all') {
+                brandsIndex.classList.remove('hidden');
+                brandsIndexContent.innerHTML = '';
+                
+                Object.keys(byBrand).sort().forEach(brand => {
+                    const btn = document.createElement('button');
+                    btn.className = 'px-3 py-1 bg-blue-100 text-blue-800 rounded hover:bg-blue-200 capitalize';
+                    btn.textContent = `${brand} (${byBrand[brand].length})`;
+                    btn.onclick = () => scrollToBrand(brand);
+                    brandsIndexContent.appendChild(btn);
+                });
+            } else {
+                brandsIndex.classList.add('hidden');
+            }
+            
+            // Renderizar tabelas por marca
+            const container = document.getElementById('vehiclesContainer');
+            container.innerHTML = '';
+            
+            Object.keys(byBrand).sort().forEach(brand => {
+                const vehicles = byBrand[brand];
+                
+                // Header da marca
+                const brandSection = document.createElement('div');
+                brandSection.id = `brand-${brand}`;
+                brandSection.className = 'mb-6';
+                
+                const brandHeader = document.createElement('div');
+                brandHeader.className = 'bg-gray-100 px-6 py-3 border-b-2 border-blue-500';
+                brandHeader.innerHTML = `<h3 class="text-lg font-bold capitalize">${brand} <span class="text-sm font-normal text-gray-600">(${vehicles.length} veículos)</span></h3>`;
+                brandSection.appendChild(brandHeader);
+                
+                // Tabela da marca
+                const table = document.createElement('table');
+                table.className = 'min-w-full divide-y divide-gray-200';
+                table.innerHTML = `
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Foto</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome Original</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Nome Editado</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Categoria</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200"></tbody>
+                `;
+                
+                const tbody = table.querySelector('tbody');
+                
+                vehicles.forEach((vehicle, idx) => {
+                const photoUrl = `/api/vehicles/${encodeURIComponent(vehicle.clean)}/photo`;
+                const isUncategorized = vehicle.isUncategorized || false;
+                const bgClass = isUncategorized ? 'bg-yellow-50 hover:bg-yellow-100' : 'hover:bg-gray-50';
+                const categoryBadge = isUncategorized 
+                    ? `<span class="px-2 py-1 text-xs rounded-full bg-yellow-100 text-yellow-800">${vehicle.category}</span>`
+                    : `<span class="px-2 py-1 text-xs rounded-full bg-blue-100 text-blue-800">${vehicle.category}</span>`;
+                
+                const editButton = isUncategorized
+                    ? `<button onclick="addToVehicles('${vehicle.clean.replace(/'/g, "\\'")}', '${vehicle.category.replace(' (sugestão)', '')}', '${vehicle.brand}', '${vehicle.model}')" 
+                              class="text-green-600 hover:text-green-800 font-semibold">
+                          ➕ Adicionar
+                       </button>`
+                    : `<button onclick="editVehicle(${vehiclesData.indexOf(vehicle)})" 
+                              class="text-[#009cb6] hover:text-[#007a8e] font-semibold">
+                          ✏️ Editar
+                       </button>`;
+                
+                    const row = document.createElement('tr');
+                    row.className = bgClass;
+                    row.innerHTML = `
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            <img src="${photoUrl}?t=${Date.now()}" 
+                                 onerror="this.src='data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 width=%2760%27 height=%2740%27%3E%3Crect width=%2760%27 height=%2740%27 fill=%27%23e5e7eb%27/%3E%3Ctext x=%2750%25%27 y=%2750%25%27 dominant-baseline=%27middle%27 text-anchor=%27middle%27 fill=%27%23999%27 font-size=%2712%27%3E🚗%3C/text%3E%3C/svg%3E'"
+                                 alt="${vehicle.clean}" 
+                                 class="h-10 w-auto rounded border">
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm text-gray-500">${vehicle.original}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <div class="text-sm font-mono ${isUncategorized ? 'text-yellow-600' : 'text-blue-600'}">${vehicle.clean}</div>
+                        </td>
+                        <td class="px-6 py-4">
+                            ${categoryBadge}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap">
+                            ${editButton}
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+                
+                brandSection.appendChild(table);
+                container.appendChild(brandSection);
+            });
+        }
+        
+        function scrollToBrand(brand) {
+            const element = document.getElementById(`brand-${brand}`);
+            if (element) {
+                element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                // Highlight temporário
+                element.classList.add('ring-2', 'ring-blue-500');
+                setTimeout(() => {
+                    element.classList.remove('ring-2', 'ring-blue-500');
+                }, 2000);
+            }
+        }
+        
+        function showNewCategoryInput() {
+            const select = document.getElementById('editCategory');
+            const input = document.getElementById('newCategoryInput');
+            
+            if (input.classList.contains('hidden')) {
+                input.classList.remove('hidden');
+                input.focus();
+                select.disabled = true;
+                select.classList.add('opacity-50');
+            } else {
+                input.classList.add('hidden');
+                select.disabled = false;
+                select.classList.remove('opacity-50');
+                
+                // Se preencheu, usar o valor
+                if (input.value.trim()) {
+                    // Adicionar ao select
+                    const option = document.createElement('option');
+                    option.value = input.value.trim();
+                    option.textContent = input.value.trim();
+                    option.selected = true;
+                    select.appendChild(option);
+                    
+                    // Adicionar ao mapeamento se não existir
+                    if (!categoryToGroup[input.value.trim()]) {
+                        const newGroup = prompt('Digite o código do grupo para esta categoria (ex: P1):');
+                        if (newGroup) {
+                            categoryToGroup[input.value.trim()] = newGroup.toUpperCase();
+                        }
+                    }
+                    
+                    input.value = '';
+                }
+            }
+        }
+        
+        function showNewGroupInput() {
+            const select = document.getElementById('editGroup');
+            const input = document.getElementById('newGroupInput');
+            
+            if (input.classList.contains('hidden')) {
+                input.classList.remove('hidden');
+                input.focus();
+                select.disabled = true;
+                select.classList.add('opacity-50');
+            } else {
+                input.classList.add('hidden');
+                select.disabled = false;
+                select.classList.remove('opacity-50');
+                
+                // Se preencheu, usar o valor
+                if (input.value.trim()) {
+                    const groupCode = input.value.trim().toUpperCase();
+                    const groupName = prompt(`Digite o nome descritivo para o grupo ${groupCode}:`);
+                    
+                    if (groupName) {
+                        // Adicionar ao select
+                        const option = document.createElement('option');
+                        option.value = groupCode;
+                        option.textContent = `${groupCode} - ${groupName}`;
+                        option.selected = true;
+                        select.appendChild(option);
+                    }
+                    
+                    input.value = '';
+                }
+            }
+        }
+        
+        function addToVehicles(cleanName, category, brand, model) {
+            // Abrir modal de edição pré-preenchido para adicionar ao VEHICLES
+            editingIndex = -1; // Novo veículo
+            
+            document.getElementById('editOriginalName').value = cleanName + ' (do scraping)';
+            document.getElementById('editCleanName').value = cleanName;
+            document.getElementById('editBrand').value = brand;
+            document.getElementById('editModel').value = model;
+            document.getElementById('editCategory').value = category;
+            document.getElementById('editGroup').value = categoryToGroup[category] || 'D';
+            document.getElementById('photoUrl').value = '';
+            document.getElementById('photoFile').value = '';
+            document.getElementById('codePreview').classList.add('hidden');
+            document.getElementById('photoPreview').classList.add('hidden');
+            
+            currentVehicleName = cleanName;
+            
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+        
+        function editVehicle(index) {
+            editingIndex = index;
+            const vehicle = vehiclesData[index];
+            
+            document.getElementById('editOriginalName').value = vehicle.original;
+            document.getElementById('editCleanName').value = vehicle.clean;
+            document.getElementById('editBrand').value = vehicle.brand;
+            document.getElementById('editModel').value = vehicle.model;
+            document.getElementById('editCategory').value = vehicle.category;
+            document.getElementById('editGroup').value = categoryToGroup[vehicle.category] || 'D';
+            document.getElementById('photoUrl').value = '';
+            document.getElementById('photoFile').value = '';
+            document.getElementById('codePreview').classList.add('hidden');
+            
+            // Carregar foto do veículo
+            loadVehiclePhoto(vehicle.clean);
+            
+            document.getElementById('editModal').classList.remove('hidden');
+        }
+        
+        function saveEdit() {
+            const cleanName = document.getElementById('editCleanName').value.toLowerCase().trim();
+            const brand = document.getElementById('editBrand').value.toLowerCase().trim();
+            const model = document.getElementById('editModel').value.toLowerCase().trim();
+            const category = document.getElementById('editCategory').value;
+            const group = document.getElementById('editGroup').value;
+            
+            if (!cleanName || !category) {
+                alert('Preencha o nome editado e categoria!');
+                return;
+            }
+            
+            // Atualizar dados
+            vehiclesData[editingIndex].clean = cleanName;
+            vehiclesData[editingIndex].brand = brand;
+            vehiclesData[editingIndex].model = model;
+            vehiclesData[editingIndex].category = category;
+            vehiclesData[editingIndex].group = group;
+            
+            // Gerar código
+            const code = `    '${cleanName}': '${category}',  # Grupo ${group} | ${brand} ${model}`;
+            document.getElementById('generatedCode').textContent = code;
+            document.getElementById('codePreview').classList.remove('hidden');
+            
+            // Re-renderizar
+            renderTable();
+        }
+        
+        function saveAllChanges() {
+            let code = 'VEHICLES = {\n';
+            
+            // Agrupar por categoria
+            const byCategory = {};
+            vehiclesData.forEach(v => {
+                if (!byCategory[v.category]) byCategory[v.category] = [];
+                byCategory[v.category].push(v);
+            });
+            
+            // Gerar código organizado
+            Object.keys(byCategory).sort().forEach(category => {
+                code += `    # ${category}\n`;
+                byCategory[category].forEach(v => {
+                    code += `    '${v.clean}': '${category}',\n`;
+                });
+                code += '\n';
+            });
+            
+            code += '}';
+            
+            document.getElementById('fullExportCode').textContent = code;
+            document.getElementById('exportModal').classList.remove('hidden');
+        }
+        
+        function copyExportCode() {
+            const code = document.getElementById('fullExportCode').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                alert('✅ Código copiado! Cole em carjet_direct.py');
+            });
+        }
+        
+        function closeModal() {
+            document.getElementById('editModal').classList.add('hidden');
+        }
+        
+        function closeExportModal() {
+            document.getElementById('exportModal').classList.add('hidden');
+        }
+        
+        // Event listeners
+        document.getElementById('searchInput').addEventListener('input', renderTable);
+        document.getElementById('filterBrand').addEventListener('change', renderTable);
+        document.getElementById('filterCategory').addEventListener('change', renderTable);
+        
+        // Auto-preencher brand e model quando clean name muda
+        document.getElementById('editCleanName').addEventListener('input', (e) => {
+            const name = e.target.value.toLowerCase().trim();
+            const parts = name.split(' ');
+            document.getElementById('editBrand').value = parts[0] || '';
+            document.getElementById('editModel').value = parts.slice(1).join(' ') || '';
+        });
+        
+        // Sincronizar grupo quando categoria muda
+        document.getElementById('editCategory').addEventListener('change', (e) => {
+            const category = e.target.value;
+            const group = categoryToGroup[category] || 'D';
+            document.getElementById('editGroup').value = group;
+        });
+        
+        // Exportar configuração completa
+        async function exportConfiguration() {
+            try {
+                const response = await fetch('/api/export/config');
+                
+                if (!response.ok) {
+                    throw new Error('Erro ao exportar');
+                }
+                
+                // Download do ficheiro
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = response.headers.get('Content-Disposition')?.split('filename=')[1] || 'config.json';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                alert('✅ Configuração exportada com sucesso!\nGuarde este ficheiro para fazer backup.');
+            } catch (error) {
+                alert('❌ Erro ao exportar: ' + error.message);
+            }
+        }
+        
+        // Importar configuração
+        async function importConfiguration(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append('file', file);
+            
+            try {
+                const response = await fetch('/api/import/config', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    alert(`✅ Importação concluída!\n\n` +
+                          `Veículos: ${data.vehicles_count}\n` +
+                          `Suppliers: ${data.suppliers_count}\n` +
+                          `Users: ${data.users_imported}\n` +
+                          `Fotos: ${data.photos_imported || 0}\n\n` +
+                          `${data.instructions}`);
+                    
+                    // Mostrar código para copiar
+                    if (data.vehicles_code) {
+                        console.log('=== CÓDIGO PARA VEHICLES ===');
+                        console.log(data.vehicles_code);
+                        
+                        if (data.suppliers_code) {
+                            console.log('\n=== CÓDIGO PARA SUPPLIER_MAP ===');
+                            console.log(data.suppliers_code);
+                        }
+                        
+                        // Criar modal com código
+                        const modal = document.createElement('div');
+                        modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4';
+                        modal.innerHTML = `
+                            <div class="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                                <div class="p-6">
+                                    <h2 class="text-xl font-bold mb-4">Código Importado</h2>
+                                    <p class="text-sm mb-4">Copie este código e cole em <code>carjet_direct.py</code>:</p>
+                                    <pre class="bg-gray-900 text-green-400 p-4 rounded text-xs overflow-x-auto mb-4">${data.vehicles_code}${data.suppliers_code || ''}</pre>
+                                    <div class="flex gap-3">
+                                        <button onclick="navigator.clipboard.writeText(\`${data.vehicles_code}${data.suppliers_code || ''}\`).then(() => alert('Copiado!')); this.parentElement.parentElement.parentElement.remove()" 
+                                                class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700">
+                                            📋 Copiar Código
+                                        </button>
+                                        <button onclick="this.parentElement.parentElement.parentElement.remove()" 
+                                                class="px-4 py-2 border rounded hover:bg-gray-50">
+                                            Fechar
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        document.body.appendChild(modal);
+                    }
+                    
+                    // Recarregar dados
+                    await loadVehicles();
+                } else {
+                    alert('❌ Erro: ' + data.error);
+                }
+            } catch (error) {
+                alert('❌ Erro ao importar: ' + error.message);
+            }
+            
+            // Limpar input
+            event.target.value = '';
+        }
+        
+        // Carregar ao iniciar
+        loadVehicles();
+
+        // Funções de gestão de fotos
+        let currentVehicleName = "";
+        
+        async function loadVehiclePhoto(vehicleName) {
+            currentVehicleName = vehicleName;
+            const photoUrl = `/api/vehicles/${encodeURIComponent(vehicleName)}/photo`;
+            const preview = document.getElementById("photoPreview");
+            const previewImage = document.getElementById("photoPreviewImage");
+            
+            try {
+                const response = await fetch(photoUrl);
+                if (response.ok) {
+                    previewImage.src = photoUrl + "?t=" + Date.now();
+                    preview.classList.remove("hidden");
+                } else {
+                    preview.classList.add("hidden");
+                }
+            } catch (error) {
+                preview.classList.add("hidden");
+            }
+        }
+        
+        async function downloadPhotoFromUrl() {
+            const url = document.getElementById("photoUrl").value.trim();
+            if (!url) {
+                alert("Por favor, cole uma URL válida!");
+                return;
+            }
+            
+            try {
+                const response = await fetch(`/api/vehicles/${encodeURIComponent(currentVehicleName)}/photo/from-url`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ url: url })
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    alert("✅ Foto baixada e salva com sucesso!");
+                    await loadVehiclePhoto(currentVehicleName);
+                    renderTable();
+                } else {
+                    alert("❌ Erro: " + data.error);
+                }
+            } catch (error) {
+                alert("❌ Erro ao baixar foto: " + error.message);
+            }
+        }
+        
+        async function uploadPhotoFile() {
+            const fileInput = document.getElementById("photoFile");
+            const file = fileInput.files[0];
+            
+            if (!file) return;
+            
+            const formData = new FormData();
+            formData.append("file", file);
+            
+            try {
+                const response = await fetch(`/api/vehicles/${encodeURIComponent(currentVehicleName)}/photo/upload`, {
+                    method: "POST",
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (data.ok) {
+                    alert("✅ Foto enviada com sucesso!");
+                    await loadVehiclePhoto(currentVehicleName);
+                    renderTable();
+                } else {
+                    alert("❌ Erro: " + data.error);
+                }
+            } catch (error) {
+                alert("❌ Erro ao enviar foto: " + error.message);
+            }
+        }
+        
+        document.addEventListener("DOMContentLoaded", () => {
+            const fileInput = document.getElementById("photoFile");
+            if (fileInput) {
+                fileInput.addEventListener("change", async (e) => {
+                    const file = e.target.files[0];
+                    if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (e) => {
+                            document.getElementById("photoPreviewImage").src = e.target.result;
+                            document.getElementById("photoPreview").classList.remove("hidden");
+                        };
+                        reader.readAsDataURL(file);
+                        await uploadPhotoFile();
+                    }
+                });
+            }
+        });
+
+    </script>
+</body>
+</html>
+

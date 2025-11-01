@@ -1,0 +1,44 @@
+services:
+  - type: web
+    name: rental-price-tracker
+    env: docker
+    plan: free
+    autoDeploy: true
+    healthCheckPath: /healthz
+    # NOTE: Persistent disks require paid plans ($7/month+)
+    # Using auto-create users on startup instead (FREE!)
+    envVars:
+      - key: ADMIN_PASSWORD
+        sync: false  # Set in Dashboard - password for 'admin' user
+      - key: CARLPAC82_PASSWORD
+        sync: false  # Set in Dashboard - password for 'carlpac82' user
+      - key: DPRUDENTE_PASSWORD
+        sync: false  # Set in Dashboard - password for 'dprudente' user
+      - key: APP_USERNAME
+        sync: false
+      - key: APP_PASSWORD
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+      - key: USE_PLAYWRIGHT
+        value: "1"
+      - key: TEST_MODE_LOCAL
+        value: "0"  # Real scraping mode (0=real scraping, 1=test URLs)
+      - key: SCRAPER_SERVICE
+        value: "scrapeops"
+      - key: SCRAPER_API_KEY
+        sync: false
+      - key: SCRAPER_COUNTRY
+        value: "pt"
+      - key: FORCE_PROXY_FOR_CARJET
+        value: "1"
+      - key: TEST_FARO_URL
+        sync: false
+      - key: TEST_ALBUFEIRA_URL
+        sync: false
+      - key: TARGET_URL
+        sync: false
+      - key: CARJET_PRICE_ADJUSTMENT_PCT
+        value: "3.12"
+      - key: CARJET_PRICE_OFFSET_EUR
+        value: "0"

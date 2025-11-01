@@ -1,0 +1,2437 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+    <meta http-equiv="Pragma" content="no-cache"/>
+    <meta http-equiv="Expires" content="0"/>
+    <meta name="cache-bust" content="v3-RESTORE-COMPLEX"/>
+    <title>Rental Prices v3 FULL</title>
+    <link rel="icon" type="image/png" href="/static/autoprudente-favicon.png?v=2" />
+    <link rel="shortcut icon" href="/static/autoprudente-favicon.png?v=2" />
+    <link rel="apple-touch-icon" href="/static/autoprudente-favicon.png?v=2" />
+    <link rel="manifest" href="/static/manifest.webmanifest">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Car Rental Tracker">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Preload all supplier logos from database for faster rendering -->
+    {% for logo_path in supplier_logos %}
+    <link rel="preload" as="image" href="{{ logo_path }}" />
+    {% endfor %}
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      * { 
+        font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        border-radius: 0 !important;
+      }
+      /* Exceção: fotos de perfil sempre redondas */
+      img[alt="Profile"], img[src*="profile"], .profile-picture {
+        border-radius: 50% !important;
+      }
+      :root {
+        --brand-yellow: #f4ad0f;
+        --brand-yellow-50: rgba(244, 173, 15, 0.2);
+        --brand-teal: #009cb6;
+        --brand-teal-20: rgba(0, 156, 182, 0.2);
+        --brand-header: #7ec6e0; /* header blue; send your brand hex and I'll update */
+      }
+      .progress { height: 12px; border-radius: 9999px; background: rgba(0,156,182,0.25); overflow: hidden; border: 1px solid #e5eef0; position: relative; z-index: 1; }
+      .progress .bar {
+        width: 0%; height: 100%; border-radius: inherit;
+        background: var(--brand-yellow);
+        transition: width .25s ease;
+      }
+      /* Logos outline */
+      .logo-badge { border: 1px solid #e5e7eb; border-radius: 8px; padding: 6px; background: #fff; box-shadow: 0 1px 0 #e5e7eb; }
+      .logo-badge img { display:block; height: 22px; width: auto; }
+      .logos-grid-4 { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; align-items:center; justify-items:center; }
+      /* Moving background scene (inline SVG) */
+      @keyframes scrollStrip { from { transform: translateX(0); } to { transform: translateX(-600px); } }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      @-webkit-keyframes spin { to { -webkit-transform: rotate(360deg); transform: rotate(360deg); } }
+      .scene { position: relative; height: min(16vh, 180px); margin-bottom: 2px; overflow: hidden; border-radius: 10px; background: linear-gradient(#ffffff, #ffffff); display:flex; align-items:flex-end; justify-content:center; }
+      .car-vehicle { position: relative; z-index: 2; display: block; pointer-events: none; }
+      .wheel { transform-box: fill-box; transform-origin: center; }
+      .wheel-rotor { transform-box: fill-box; transform-origin: center; animation: spin .6s linear infinite; -webkit-animation: spin .6s linear infinite; will-change: transform; }
+      .scene-bg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index: 0; }
+      @keyframes scrollX { from { background-position: 0 100%; } to { background-position: -600px 100%; } }
+      @keyframes drift { from { transform: translateX(0); } to { transform: translateX(-600px); } }
+      @keyframes driftSlow { from { transform: translateX(0); } to { transform: translateX(-300px); } }
+      .parallax { animation: drift 18s linear infinite; will-change: transform; }
+      .parallax-slow { animation: driftSlow 28s linear infinite; will-change: transform; }
+      .clouds { animation: drift 35s linear infinite; will-change: transform; }
+      /* Loading title animated dots */
+      .loading-title { line-height: 1.25; text-align:center; margin: 0 auto; }
+      /* 15% vertical gap (capped) between title and car */
+      .loading-gap { margin-bottom: min(15vh, 90px); }
+      .loading-title .dots{ display:inline-block; overflow:hidden; width:0ch; vertical-align:baseline; animation: loadingDots 1.2s steps(3,end) infinite; }
+      .loading-title .dots::after{ content:"..."; }
+      @keyframes loadingDots { from { width:0ch; } to { width:3ch; } }
+      /* Layered PNG backgrounds removed in favor of inline SVG landscape */
+      .layer { display:none; }
+      .scene-fallback { position:absolute; inset:0; z-index:0; pointer-events:none; }
+      .layer-ground { animation: scrollX 14s linear infinite; }
+      .layer-hills { animation: scrollX 22s linear infinite; background-position: 0 95%; }
+      .layer-trees { animation: scrollX 18s linear infinite; background-position: 0 98%; }
+      .layer-clouds { animation: scrollX 40s linear infinite; background-position: 0 10%; background-size: auto 120px; }
+      /* Removed external photo layer to keep fully transparent background */
+      /* Removed vertical bounce so wheels remain fixed in place */
+      .group-title { background-color: var(--brand-yellow); transition: background-color .15s ease-in-out; }
+      .group-title:hover { background-color: #e39e0e; }
+      /* Mobile-friendly scroll for expanded groups */
+      .accordion-content { max-height: 70vh; overflow-y: auto; }
+      @media (min-width: 768px) { .accordion-content { max-height: none; overflow: visible; } }
+      /* Inline form styling resembling Carjet */
+      .seg { display:flex; align-items:center; gap:8px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px; padding:8px 10px; height:48px; }
+      .seg-badge { background:#009cb6; color:#fff; font-weight:700; border-radius:6px; padding:4px 8px; line-height:1; min-width:26px; text-align:center; flex-shrink:0; }
+      .seg input, .seg select { background:#fff; border:1px solid #d1d5db; border-radius:6px; padding:4px 8px; font-size:14px; line-height:1.4; height:32px; }
+      .seg .label { font-size:12px; color:#374151; margin-right:4px; }
+      .btn-search { background:#009cb6; color:#fff; font-weight:600; border-radius:8px; padding:10px 16px; }
+      .btn-search:hover, .btn-search:focus { background: var(--brand-yellow); color:#fff; }
+      button:hover, button:focus { background-color: var(--brand-yellow); color:#fff; }
+      .lowest-badge { background: var(--brand-header); color:#fff; padding:2px 8px; border-radius:9999px; font-size:10px; line-height:1; }
+      .date-input { min-width: 120px; max-width: 140px; }
+      .time-input { min-width: 90px; }
+      .days-input { min-width: 80px; }
+      .nowrap { white-space: nowrap; }
+      /* Calendário maior no desktop */
+      @media (min-width: 768px) {
+        input[type="date"]::-webkit-calendar-picker-indicator {
+          font-size: 20px;
+          cursor: pointer;
+        }
+        input[type="date"] {
+          font-size: 16px;
+        }
+      }
+      /* Supplier filters sidebar */
+      .suppliers-sidebar {
+        position: sticky;
+        top: 20px;
+        max-height: calc(100vh - 40px);
+        overflow-y: auto;
+      }
+      .suppliers-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 6px;
+        max-height: calc(100vh - 120px);
+        overflow-y: auto;
+      }
+      .supplier-checkbox {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        padding: 6px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: white;
+        min-height: auto;
+        opacity: 1;
+        box-shadow: 0 1px 0 #e5e7eb;
+      }
+      .supplier-checkbox:hover {
+        background: #f0f9fb;
+        transform: translateY(-2px);
+        box-shadow: 0 2px 6px rgba(0,156,182,0.3);
+      }
+      .supplier-checkbox.unselected {
+        opacity: 0.6;
+        border-color: #ef4444;
+        background: #fef2f2;
+        filter: grayscale(100%);
+      }
+      .supplier-checkbox.unselected:hover {
+        opacity: 0.8;
+        filter: grayscale(50%);
+      }
+      .supplier-logo {
+        height: 22px;
+        width: auto;
+        max-width: 60px;
+        object-fit: contain;
+      }
+      .supplier-name {
+        font-size: 9px;
+        color: #374151;
+        text-align: center;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+        display: block;
+        line-height: 1.2;
+      }
+      .suppliers-sidebar.collapsed {
+        display: none;
+      }
+      .bar { display:block; height:6px; border-radius:3px; }
+      .bar-blue { background:#009cb6; width:36px; }
+      .bar-yellow { background: var(--brand-yellow); width:28px; }
+      /* Progress bar fixed yellow (no color animation) */
+      #loadingModal .progress .bar { background: var(--brand-yellow); }
+      #loadingModal.loading .progress .bar { animation: none; }
+      
+      /* MOBILE OPTIMIZATIONS */
+      @media (max-width: 768px) {
+        /* Responsive containers */
+        .mx-auto.max-w-6xl { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+        
+        /* Touch-friendly buttons */
+        button, .btn { min-height: 44px; padding: 12px 16px; font-size: 16px; }
+        input, select { min-height: 44px; font-size: 16px; padding: 10px 12px; }
+        
+        /* Stack form elements */
+        .seg { flex-direction: column; align-items: stretch !important; height: auto !important; }
+        .seg input, .seg select { width: 100% !important; }
+        
+        /* Responsive grid */
+        .grid.grid-cols-2, .grid.grid-cols-3, .grid.grid-cols-4 { grid-template-columns: 1fr !important; }
+        
+        /* Smaller header logo */
+        header img { max-height: 36px !important; }
+        
+        /* Hide desktop nav, show hamburger */
+        .desktop-nav { display: none !important; }
+        .mobile-menu-btn { display: block !important; }
+        
+        /* Suppliers sidebar - collapsible on mobile */
+        .suppliers-sidebar { position: static; max-height: none; margin-bottom: 1rem; }
+        .suppliers-grid { grid-template-columns: repeat(2, 1fr) !important; max-height: 300px; }
+      }
+      
+      /* Mobile menu */
+      .mobile-menu-btn { display: none; background: none; border: none; color: white; padding: 8px; }
+      .mobile-menu { display: none; position: fixed; inset: 0; background: #009cb6; z-index: 9999; }
+      .mobile-menu.active { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 20px; }
+      .mobile-menu a { color: white; font-size: 20px; padding: 16px; width: 100%; text-align: center; border-radius: 8px; transition: background 0.2s; display: flex; align-items: center; justify-content: center; gap: 12px; }
+      .mobile-menu a:hover { background: rgba(255,255,255,0.1); }
+      .mobile-menu a svg { color: #f4ad0f; width: 24px; height: 24px; }
+      .mobile-menu-close { position: absolute; top: 20px; right: 20px; background: none; border: none; color: #f4ad0f; font-size: 32px; cursor: pointer; }
+    </style>
+  </head>
+  <body class="min-h-screen bg-gray-50">
+    <noscript>
+      <div class="p-3 text-red-700 bg-red-50">This app works best with JavaScript enabled.</div>
+    </noscript>
+    <header class="bg-[#009cb6] border-b">
+      <div class="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <a href="/" class="inline-flex items-center" title="Homepage">
+            <img src="/static/ap-heather.png" alt="Auto Prudente" class="h-12 w-auto" />
+          </a>
+          <span class="sr-only">Carjet Rental Price Tracker</span>
+        </div>
+        
+        <!-- Mobile Menu Button -->
+        <button class="mobile-menu-btn" onclick="document.getElementById('mobileMenu').classList.add('active')" aria-label="Menu">
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>
+          </svg>
+        </button>
+        
+        <div class="flex items-center gap-3 desktop-nav">
+          <button onclick="cachedResults = {}; document.getElementById('results').innerHTML = ''; localStorage.clear(); sessionStorage.clear(); history.replaceState({}, '', window.location.pathname); showCustomAlert('Sessão renovada!', 'success');" class="p-2 text-white/90 hover:text-white hover:bg-white/10 transition-all" title="Renovar Sessão">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+            </svg>
+          </button>
+          <a href="/price-history" class="p-2 text-white/90 hover:text-white hover:bg-white/10 transition-all" title="Histórico de Preços">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+          </a>
+          <a href="/price-automation" class="p-2 text-white/90 hover:text-white hover:bg-white/10 transition-all" title="Automação de Preços">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </a>
+          {% if request.session and request.session.get('is_admin') %}
+          <a href="/admin" class="p-2 text-white/90 hover:text-white hover:bg-white/10 transition-all" title="Settings">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+          </a>
+          {% endif %}
+          {% if current_user %}
+          <div class="relative flex items-center">
+            <button onclick="toggleProfileMenu()" class="flex items-center gap-2 p-1 hover:bg-white/10 transition-all">
+              {% if current_user.profile_picture_path %}
+              <img src="{{ current_user.profile_picture_path }}" alt="Profile" class="h-8 w-8 sm:h-9 sm:w-9 rounded-full object-cover border-2 border-white/40" />
+              {% else %}
+              <div class="h-8 w-8 sm:h-9 sm:w-9 rounded-full bg-white/20 text-white flex items-center justify-center text-xs sm:text-sm font-semibold border-2 border-white/40">
+                {{ (current_user.first_name[:1] or 'U') | upper }}
+              </div>
+              {% endif %}
+            </button>
+            <div id="profileMenu" class="hidden absolute right-0 mt-2 w-56 bg-white shadow-lg border border-gray-200 z-50">
+              <div class="px-4 py-3 border-b border-gray-100">
+                <p class="text-sm font-medium text-gray-900">{{ (current_user.first_name + ' ' + current_user.last_name).strip() or current_user.username }}</p>
+                <p class="text-xs text-gray-500">{{ current_user.email or current_user.username }}</p>
+              </div>
+              <div class="py-1">
+                <a href="/admin?section=profile" class="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                  </svg>
+                  Edit Profile
+                </a>
+                <form method="post" action="/logout" class="w-full">
+                  <button type="submit" class="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+                    </svg>
+                    Logout
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </header>
+    
+    <!-- Mobile Menu -->
+    <div class="mobile-menu" id="mobileMenu">
+      <button class="mobile-menu-close" onclick="closeMobileMenu()">×</button>
+      <a href="/" onclick="closeMobileMenu()" class="flex items-center justify-center gap-3">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>
+        <span>Home</span>
+      </a>
+      <a href="/price-history" onclick="closeMobileMenu()" class="flex items-center justify-center gap-3">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        <span>History</span>
+      </a>
+      <a href="/price-automation" onclick="closeMobileMenu()" class="flex items-center justify-center gap-3">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <span>Automation</span>
+      </a>
+      {% if request.session and request.session.get('is_admin') %}
+      <a href="/admin" onclick="closeMobileMenu()" class="flex items-center justify-center gap-3">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <span>Settings</span>
+      </a>
+      {% endif %}
+      {% if current_user %}
+      <a href="/admin?section=profile" onclick="closeMobileMenu()" class="flex items-center justify-center gap-3">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+        <span>Profile</span>
+      </a>
+      <a href="#" onclick="event.preventDefault(); document.querySelector('form[action=\"/logout\"]').submit();" class="flex items-center justify-center gap-3" style="border-top: 1px solid rgba(255,255,255,0.2); margin-top: 10px;">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+        <span>Logout</span>
+      </a>
+      {% endif %}
+    </div>
+    <script>
+      function toggleProfileMenu() {
+        const menu = document.getElementById('profileMenu');
+        menu.classList.toggle('hidden');
+      }
+      
+      function closeMobileMenu() {
+        document.getElementById('mobileMenu').classList.remove('active');
+      }
+      // Close menu when clicking outside
+      document.addEventListener('click', function(event) {
+        const menu = document.getElementById('profileMenu');
+        const button = event.target.closest('button[onclick="toggleProfileMenu()"]');
+        if (!button && !menu.contains(event.target)) {
+          menu.classList.add('hidden');
+        }
+      });
+    </script>
+
+    <main class="mx-auto max-w-7xl px-4 py-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Sidebar de Filtros (Suppliers) - Escondida inicialmente -->
+        <aside id="suppliersSidebar" class="lg:col-span-3" style="display: none;">
+          <div class="suppliers-sidebar bg-white rounded-lg shadow p-4">
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="font-semibold text-sm text-gray-900">Filter by Company</h3>
+              <button onclick="toggleAllSuppliers()" class="text-xs text-[#009cb6] hover:text-[#f4ad0f]" title="Select/Deselect All">
+                All
+              </button>
+            </div>
+            <div id="suppliersFilter" class="suppliers-grid">
+              <!-- Suppliers will be loaded here -->
+            </div>
+          </div>
+        </aside>
+
+        <!-- Conteúdo Principal -->
+        <div id="mainContent" class="lg:col-span-12 space-y-8">
+      
+      <section class="bg-white rounded-lg shadow p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-medium border-l-4 border-[#f6b511] pl-3">Search by Parameters</h2>
+        </div>
+        <form id="paramForm" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end" onsubmit="return false">
+          <div class="md:col-span-3 seg">
+            <label class="sr-only">Pickup Location</label>
+            <select id="location" style="flex:1; min-width:0;">
+              <option value="Aeroporto de Faro">Aeroporto de Faro</option>
+              <option value="Albufeira">Albufeira</option>
+            </select>
+          </div>
+          <!-- Data de início (segundo campo) -->
+          <div class="md:col-span-2 seg">
+            <span class="seg-badge"><svg width="14" height="14" viewBox="0 0 20 20" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M6 2a1 1 0 012 0v1h4V2a1 1 0 112 0v1h1a2 2 0 012 2v2H3V5a2 2 0 012-2h1V2zM3 9h14v6a2 2 0 01-2 2H5a2 2 0 01-2-2V9zm4 2a1 1 0 000 2h6a1 1 0 100-2H7z"/></svg></span>
+            <label class="sr-only">Start Date</label>
+            <input id="startDate" type="date" placeholder="Start Date" class="date-input" style="flex:1; min-width:0;" min=""/>
+          </div>
+          <!-- Dias (terceiro campo na mesma linha) -->
+          <div class="md:col-span-7 seg" style="flex-wrap: nowrap; overflow-x: auto;">
+            <label class="sr-only">Days</label>
+            <input id="days" type="hidden" value="7" />
+            <div id="daysChips" class="flex flex-nowrap gap-1"></div>
+          </div>
+          <!-- Botões -->
+          <div class="md:col-span-12 flex gap-3 items-center flex-wrap">
+            <button id="fetchAllBtn" type="button" class="btn-search">Search</button>
+            <button id="searchAllDaysBtn" type="button" class="flex items-center gap-2 px-4 py-2.5 text-sm font-semibold bg-[#f4ad0f] text-white hover:bg-[#009cb6] transition-colors">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/>
+              </svg>
+              Search All Days
+            </button>
+            <!-- Fetch All temporariamente removido -->
+            <button id="fetchAllDaysBtn" type="button" class="hidden px-4 py-2.5 text-sm font-semibold bg-[#f4ad0f] text-white rounded-lg hover:bg-[#009cb6] transition-colors">
+              📊 Fetch All Days
+            </button>
+            <span id="fetchAllStatus" class="text-xs text-gray-500"></span>
+          </div>
+          <div class="md:col-span-1 seg hidden">
+            <label class="sr-only">Start Time</label>
+            <input id="startTime" type="time" value="15:00" placeholder="15:00" class="time-input w-full rounded-md border-gray-300" />
+          </div>
+          <div class="md:col-span-2 seg hidden">
+            <span class="seg-badge"><svg width="14" height="14" viewBox="0 0 20 20" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M6 2a1 1 0 012 0v1h4V2a1 1 0 112 0v1h1a2 2 0 012 2v2H3V5a2 2 0 012-2h1V2zM3 9h14v6a2 2 0 01-2 2H5a2 2 0 01-2-2V9zm4 2a1 1 0 000 2h6a1 1 0 100-2H7z"/></svg></span>
+            <span class="bar bar-yellow"></span>
+            <label class="sr-only">Fim (data)</label>
+            <input id="endDate" type="date" placeholder="Fim" class="date-input w-full rounded-md border-gray-300" />
+          </div>
+          <div class="md:col-span-1 seg hidden">
+            <label class="sr-only">Fim (hora)</label>
+            <input id="endTime" type="time" value="10:00" placeholder="10:00" class="time-input w-full rounded-md border-gray-300" />
+          </div>
+          <div class="md:col-span-3 flex items-center gap-3 md:justify-end hidden">
+            <label class="hidden flex items-center gap-2 nowrap" style="padding:0;">
+              <input id="samePlace" type="checkbox" class="rounded border-gray-300" checked />
+              <span class="text-sm text-gray-700">Devolver no mesmo local</span>
+            </label>
+            <select id="locationDrop" class="w-full rounded-md border-gray-300 hidden">
+              <option value="Aeroporto de Faro">Aeroporto de Faro</option>
+              <option value="Albufeira">Albufeira</option>
+            </select>
+            <span id="status" class="ml-3 text-sm text-gray-600"></span>
+          </div>
+        </form>
+        <div id="results" class="mt-4"></div>
+      </section>
+      
+        </div><!-- Fim conteúdo principal -->
+      </div><!-- Fim grid -->
+    </main>
+
+    <!-- Loading modal -->
+    <div id="loadingModal" class="hidden fixed inset-0 z-50 bg-black/40">
+      <div class="bg-white w-full h-full p-0 md:p-0 overflow-auto">
+        <!-- Blue header with Auto Prudente logo -->
+        <div class="w-full" style="background: var(--brand-header);">
+          <div class="mx-auto max-w-6xl px-4 py-1 flex items-center">
+            <img src="/static/ap-heather.png" alt="Auto Prudente" class="h-10 w-auto" />
+          </div>
+        </div>
+        <div class="px-5 md:px-8">
+          <div class="loading-title text-base font-medium text-gray-800 loading-gap">Searching over 1000 rental companies<span class="dots"></span></div>
+          <div class="mx-auto" style="max-width: 520px;">
+            <div id="movingScene" class="scene" style="margin-bottom: 0px;">
+            <!-- Inline SVG landscape (mountains, clouds, trees) with transparent background -->
+            <svg class="scene-fallback" viewBox="0 0 600 540" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Background image removed for a clean transparent scene -->
+            </svg>
+            <svg class="car-vehicle" width="312" height="132" viewBox="0 0 260 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="carBody" x1="0" x2="1" y1="0" y2="0">
+                  <stop offset="0%" stop-color="#ffb454"/>
+                  <stop offset="100%" stop-color="#ff8a3d"/>
+                </linearGradient>
+              </defs>
+              <g transform="scale(-1,1) translate(-260,0)">
+                <rect x="20" y="84" width="220" height="6" rx="3" style="fill:var(--brand-yellow)"/>
+                <g>
+                  <path d="M48 75 h140 a12 12 0 0 0 12-12 v-10 c0-7-6-13-13-15 l-36-10 a28 28 0 0 0-7-1 h-34 a22 22 0 0 0-14 6 l-18 18 h-18 a12 12 0 0 0-12 12 v7 a6 6 0 0 0 6 6z" style="fill:var(--brand-teal)"/>
+                  <rect x="108" y="40" width="36" height="16" rx="3" fill="#CFEFFF"/>
+                </g>
+                <g>
+                  <g class="wheel">
+                    <circle cx="92" cy="75" r="12" fill="#1f2937"/>
+                    <circle cx="92" cy="75" r="4" fill="#9CA3AF"/>
+                    <g class="wheel-rotor">
+                      <circle cx="92" cy="75" r="0.01" fill="none" stroke="none"/>
+                      <rect x="91.5" y="63" width="1" height="6" fill="#fff"/>
+                      <rect x="91.5" y="81" width="1" height="6" fill="#fff"/>
+                      <rect x="80" y="74.5" width="6" height="1" fill="#fff"/>
+                      <rect x="98" y="74.5" width="6" height="1" fill="#fff"/>
+                    </g>
+                  </g>
+                  <g class="wheel">
+                    <circle cx="178" cy="75" r="12" fill="#1f2937"/>
+                    <circle cx="178" cy="75" r="4" fill="#9CA3AF"/>
+                    <g class="wheel-rotor">
+                      <circle cx="178" cy="75" r="0.01" fill="none" stroke="none"/>
+                      <rect x="177.5" y="63" width="1" height="6" fill="#fff"/>
+                      <rect x="177.5" y="81" width="1" height="6" fill="#fff"/>
+                      <rect x="166" y="74.5" width="6" height="1" fill="#fff"/>
+                      <rect x="184" y="74.5" width="6" height="1" fill="#fff"/>
+                    </g>
+                  </g>
+                </g>
+              </g>
+            </svg>
+          </div>
+        </div>
+          <div class="progress my-3" style="width:100%; max-width:520px; margin-left:auto; margin-right:auto;"><div class="bar"></div></div>
+          <!-- Benefits list centered between progress bar and logos -->
+          <div class="mt-2 flex justify-center">
+            <ul class="list-none space-y-1 text-sm text-gray-800 m-0 p-0">
+              <li class="flex items-start gap-2">
+                <svg class="mt-0.5 h-4 w-4 text-green-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0L3.293 9.957a1 1 0 111.414-1.414l3.004 3.004 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                <span>Best price guaranteed</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <svg class="mt-0.5 h-4 w-4 text-green-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0L3.293 9.957a1 1 0 111.414-1.414l3.004 3.004 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                <span>Fast and easy</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <svg class="mt-0.5 h-4 w-4 text-green-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0L3.293 9.957a1 1 0 111.414-1.414l3.004 3.004 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                <span>More than <strong>7.9 million</strong> customers</span>
+              </li>
+            </ul>
+          </div>
+          <div class="border-t border-gray-200 my-3"></div>
+          <!-- Suppliers logos: dynamic, Auto Prudente always first -->
+          <div class="mx-auto" style="max-width: 520px;">
+            <div id="loadingLogos" class="space-y-2">
+              <!-- Logos will be loaded dynamically -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      console.log('[INIT] Versão: v2025-01-28-10-00');
+      
+      // Custom alert com estilo do website
+      function showCustomAlert(message, type = 'info') {
+        const alertDiv = document.createElement('div');
+        const icons = {
+          success: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>',
+          warning: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>',
+          error: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>',
+          info: '<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'
+        };
+        const colors = {
+          success: 'bg-[#009cb6] border-[#009cb6]',
+          warning: 'bg-[#f4ad0f] border-[#f4ad0f]',
+          error: 'bg-red-500 border-red-500',
+          info: 'bg-[#009cb6] border-[#009cb6]'
+        };
+        alertDiv.className = `fixed top-4 right-4 ${colors[type]} text-white px-6 py-4 shadow-lg z-50 flex items-center gap-3 max-w-md`;
+        alertDiv.style.fontFamily = "'Outfit', sans-serif";
+        alertDiv.innerHTML = `${icons[type]}<span class="flex-1">${message}</span>`;
+        document.body.appendChild(alertDiv);
+        setTimeout(() => {
+          alertDiv.style.transition = 'opacity 0.3s';
+          alertDiv.style.opacity = '0';
+          setTimeout(() => alertDiv.remove(), 300);
+        }, 3000);
+      }
+      
+      // Register service worker for PWA (guarded)
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          try { navigator.serviceWorker.register('/static/sw.js'); } catch(_){ }
+        });
+      }
+      // A2HS hint (guarded)
+      let deferredPrompt;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        try {
+          e.preventDefault(); deferredPrompt = e;
+          const bar = document.createElement('div');
+          bar.className = 'fixed bottom-3 left-1/2 -translate-x-1/2 bg-white border shadow rounded px-3 py-2 text-sm flex items-center gap-2';
+          bar.innerHTML = '<span>Adicionar ao ecrã inicial?</span> <button class="px-2 py-1 bg-[#009cb6] text-white rounded">Instalar</button>';
+          document.body.appendChild(bar);
+          bar.querySelector('button').addEventListener('click', async () => { try { await deferredPrompt.prompt(); } catch(_){} bar.remove(); });
+        } catch(_){}
+      });
+    </script>
+    <script>
+      // Track-by-Date was removed; no rerender of date-based blocks
+
+      // Cache global para resultados de todos os dias
+      let cachedResults = {}; // Formato: { "location-date-days": { items: [...], ... } }
+      
+      // Limpar cache quando localização muda
+      document.addEventListener('DOMContentLoaded', () => {
+        // Definir data mínima como hoje
+        const startDateInput = document.getElementById('startDate');
+        if (startDateInput) {
+          const today = new Date();
+          const yyyy = today.getFullYear();
+          const mm = String(today.getMonth() + 1).padStart(2, '0');
+          const dd = String(today.getDate()).padStart(2, '0');
+          const todayStr = `${yyyy}-${mm}-${dd}`;
+          startDateInput.setAttribute('min', todayStr);
+          console.log('[DATE] Data mínima definida:', todayStr);
+        }
+        
+        const locEl = document.getElementById('location');
+        if (locEl) {
+          locEl.addEventListener('change', () => {
+            console.log('[CACHE] Localização mudou, limpando cache...');
+            cachedResults = {};
+            // Limpar resultados exibidos
+            const resultsEl = document.getElementById('results');
+            if (resultsEl) resultsEl.innerHTML = '';
+            // Re-renderizar chips sem checkmarks
+            try {
+              const daysInput = document.getElementById('days');
+              const chipsCont = document.getElementById('daysChips');
+              if (daysInput && chipsCont) {
+                const presets = [1,2,3,4,5,6,7,8,9,14,22,28,31,60];
+                const onChange = (d) => {
+                  window.selectedDays = d;
+                  daysInput.value = String(d);
+                  daysInput.dispatchEvent(new Event('input', { bubbles: true }));
+                  renderChips('daysChips', presets, onChange);
+                };
+                renderChips('daysChips', presets, onChange);
+              }
+            } catch(_) {}
+          });
+        }
+      });
+      
+      function getCacheKey(location, date, days) {
+        const key = `${location}-${date}-${days}`;
+        console.log('[CACHE KEY]', key);
+        return key;
+      }
+
+      // Date helpers
+      function fmtDate(d){ const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${d.getFullYear()}-${m}-${day}`; }
+      function toDate(v){ const d=new Date(v); return isNaN(d.getTime())?null:d; }
+      function setupDateMath(){
+        // CORRECTED: startDate is PICKUP date (data de recolha)
+        // We compute DELIVERY date = PICKUP + days, and store it in hidden 'endDate'.
+        const pickupEl = document.getElementById('startDate');
+        const deliveryHiddenEl = document.getElementById('endDate');
+        const daysEl = document.getElementById('days');
+        if (!pickupEl || !deliveryHiddenEl || !daysEl) return;
+        function recompute(){
+          const n = parseInt(daysEl.value||'0',10);
+          const pickup = toDate(pickupEl.value); if(!pickup||!n) return;
+          const delivery = new Date(pickup); delivery.setDate(delivery.getDate()+n);
+          deliveryHiddenEl.value = fmtDate(delivery);
+        }
+        ['input','change'].forEach(ev=>{ pickupEl.addEventListener(ev, recompute); daysEl.addEventListener(ev, recompute); });
+        pickupEl.addEventListener('change', ()=>{ try{ pickupEl.blur(); }catch(_){ } recompute(); });
+        recompute();
+      }
+      // Initialize date math and days selector once DOM is ready
+      setupDateMath();
+      // Variável global para selectedDays
+      window.selectedDays = 7;
+      
+      function setupDaysSelector(){
+        try {
+          const daysInput = document.getElementById('days');
+          const chipsCont = document.getElementById('daysChips');
+          if (!daysInput || !chipsCont) return;
+          const presets = [1,2,3,4,5,6,7,8,9,14,22,31,60];
+          window.selectedDays = parseInt(daysInput.value || '7', 10) || 7;
+          function onChange(d){
+            window.selectedDays = d;
+            daysInput.value = String(d);
+            try { daysInput.dispatchEvent(new Event('input', { bubbles: true })); } catch(_){ }
+            renderChips('daysChips', presets, onChange);
+          }
+          renderChips('daysChips', presets, onChange);
+        } catch(_) { }
+      }
+      setupDaysSelector();
+
+      function groupByTransmission(items) {
+        const g = { Automatic: [], Manual: [], Other: [] };
+        (items || []).forEach((it) => {
+          const t = (it.transmission || '').toLowerCase();
+          if (t === 'automatic') g.Automatic.push(it);
+          else if (t === 'manual') g.Manual.push(it);
+          else g.Other.push(it);
+        });
+        return g;
+      }
+
+      function groupByCategory(items) {
+        // Desired order with code labels
+        const groups = [
+          { cat: 'Mini 4 Doors', label: 'B1 - Mini 4 Doors' },
+          { cat: 'Mini', label: 'B2 - Mini 5 Doors' },
+          { cat: 'Economy', label: 'D - Economy' },
+          { cat: 'Mini Automatic', label: 'E1 - Mini Automatic' },
+          { cat: 'Economy Automatic', label: 'E2 – Economy Automatic' },
+          { cat: 'SUV', label: 'F – SUV' },
+          { cat: 'Premium', label: 'G - Premium' },
+          { cat: 'Crossover', label: 'J1 – Crossover' },
+          { cat: 'Estate/Station Wagon', label: 'J2 – Station Wagon' },
+          { cat: 'SUV Automatic', label: 'L1 - SUV Automatic' },
+          { cat: 'Station Wagon Automatic', label: 'L2 - Station Wagon Automatic' },
+          { cat: '7 Seater', label: 'M1 - 7 Seater' },
+          { cat: '7 Seater Automatic', label: 'M2 - 7 Seater Automatic' },
+          { cat: '9 Seater', label: 'N - 9 Seater' },
+          { cat: 'Others', label: 'Others - Not Parameterized' },
+        ];
+        const codeToCat = {
+          'B1': 'Mini 4 Doors',
+          'B2': 'Mini',
+          'D': 'Economy',
+          'E1': 'Mini Automatic',
+          'E2': 'Economy Automatic',
+          'F': 'SUV',
+          'G': 'Premium',
+          'J1': 'Crossover',
+          'J2': 'Estate/Station Wagon',
+          'L1': 'SUV Automatic',
+          'L2': 'Station Wagon Automatic',
+          'M1': '7 Seater',
+          'M2': '7 Seater Automatic',
+          'N': '9 Seater',
+          'Others': 'Others',
+        };
+        const normalizeCat = (raw) => {
+          const s = String(raw || '').trim();
+          if (!s) return '';
+          // Exact canonical
+          const canon = groups.map(g => g.cat);
+          if (canon.includes(s)) return s;
+          const low = s.toLowerCase();
+          // Map common variants/synonyms into canonical buckets
+          if (/^mini\b.*4\b.*door/.test(low)) return 'Mini 4 Doors';
+          if (/^mini\b(?!.*4\b.*door)/.test(low)) return 'Mini';
+          if (/^econom(y|ic)/.test(low)) return /auto/.test(low) ? 'Economy Automatic' : 'Economy';
+          if (/^premium|^luxury/.test(low)) return 'Premium';
+          if (/^(suv|jeep)\b/.test(low)) return /auto/.test(low) ? 'SUV Automatic' : 'SUV';
+          if (/^(crossover)\b/.test(low)) return 'Crossover';
+          if (/(estate|station\s*wagon|\bst\b|\bsw\b|touring\s*sports|sport\s*tourer)/.test(low)) return /auto/.test(low) ? 'Station Wagon Automatic' : 'Estate/Station Wagon';
+          if (/7\s*seater/.test(low)) return /auto/.test(low) ? '7 Seater Automatic' : '7 Seater';
+          if (/9\s*seater/.test(low)) return '9 Seater';
+          if (/mini\s*automatic/.test(low)) return 'Mini Automatic';
+          if (/economy\s*automatic/.test(low)) return 'Economy Automatic';
+          if (/suv\s*automatic/.test(low)) return 'SUV Automatic';
+          if (/(station\s*wagon|estate).*automatic/.test(low)) return 'Station Wagon Automatic';
+          return s; // fallback to raw
+        };
+        const map = new Map();
+        (items || []).forEach(it => {
+          let key = '';
+          
+          // PRIORIDADE 1: Usar campo 'group' da API (já mapeado no backend)
+          if (it.group) {
+            const groupCode = String(it.group).toUpperCase();
+            key = codeToCat[groupCode] || 'Others';
+          } else {
+            // FALLBACK: Tentar mapear pela categoria
+            const disp = String(displayCategory(it) || '').trim();
+            const m = disp.match(/^group\s*([A-Z0-9]+)\b/i);
+            if (m) {
+              const code = m[1].toUpperCase();
+              key = codeToCat[code] || normalizeCat(it.category);
+            } else {
+              key = normalizeCat(disp) || normalizeCat(it.category);
+            }
+          }
+          
+          if (!key) key = 'Others';
+          if (!map.has(key)) map.set(key, []);
+          map.get(key).push(it);
+        });
+        return { groups, map };
+      }
+
+      function renderCategoryPreview(items) {
+        const { groups, map } = groupByCategory(items);
+        const toNum = (p) => {
+          if (typeof p === 'number' && isFinite(p)) return p;
+          const s = String(p || '').replace(/\s|\u00a0/g, '');
+          const m = s.match(/([0-9.,]+)/);
+          if (!m) return Number.POSITIVE_INFINITY;
+          let num = m[1];
+          const hasComma = num.includes(',');
+          const hasDot = num.includes('.');
+          if (hasComma && hasDot) {
+            num = num.replace(/\./g, '').replace(/,/g, '.');
+          } else if (hasComma && !hasDot) {
+            num = num.replace(/,/g, '.');
+          } else {
+            const parts = num.split('.');
+            if (parts.length > 2) num = parts.join('');
+          }
+          const v = parseFloat(num);
+          return isFinite(v) ? v : Number.POSITIVE_INFINITY;
+        };
+        
+        const previews = [];
+        let previewIndex = 0;
+        groups.forEach(g => {
+          // Skip Luxury group (X)
+          if (g.cat === 'Luxury') return;
+          
+          const lst = map.get(g.cat) || [];
+          if (!lst.length) return;
+          
+          // Find cheapest car in this category
+          const sorted = lst.slice().sort((a,b) => toNum(a.price) - toNum(b.price));
+          const cheapest = sorted[0];
+          if (!cheapest) return;
+          
+          const price = toNum(cheapest.price);
+          const priceFormatted = isFinite(price) ? price.toFixed(2) + ' €' : cheapest.price;
+          
+          const supplierName = displaySupplierName(cheapest.supplier || '');
+          
+          // Use same index as renderCategoryBlocks
+          const groupSecId = `group_sec_${previewIndex}`;
+          previewIndex++;
+          
+          previews.push(`
+            <div class="flex-shrink-0 flex flex-col items-center p-3 bg-white border border-gray-200 hover:border-[#f4ad0f] hover:shadow-md transition-all cursor-pointer w-40" onclick="scrollToGroup('${groupSecId}')">
+              <div class="text-xs text-gray-500 mb-1 text-center font-medium">${escapeHtml(g.label.split(' - ')[1] || g.label)}</div>
+              <img src="${imageUrlFor(cheapest)}" alt="${escapeHtml(cheapest.car)}" class="h-16 w-auto object-contain mb-2" onerror="this.src='/static/car-placeholder.png'"/>
+              <div class="text-center w-full">
+                <div class="text-lg font-bold text-[#009cb6]">${priceFormatted}</div>
+                <div class="text-xs text-gray-400 mb-1">por 5 dias</div>
+                <div class="text-xs text-gray-600 font-medium truncate px-1" title="${escapeHtml(supplierName)}">${escapeHtml(supplierName)}</div>
+              </div>
+            </div>
+          `);
+        });
+        
+        return `
+          <div class="mb-6 bg-gradient-to-r from-[#009cb6]/5 to-[#f4ad0f]/5 p-4 border-l-4 border-[#f4ad0f] relative">
+            <div class="relative">
+              <button onclick="document.getElementById('categoryPreview').scrollBy({left: -300, behavior: 'smooth'})" class="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg p-2 border border-gray-200" style="margin-left: -12px;">
+                <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                </svg>
+              </button>
+              <div id="categoryPreview" class="flex gap-3 overflow-x-auto pb-2" style="scrollbar-width: thin; scroll-behavior: smooth;">
+                ${previews.join('')}
+              </div>
+              <button onclick="document.getElementById('categoryPreview').scrollBy({left: 300, behavior: 'smooth'})" class="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 hover:bg-white shadow-lg p-2 border border-gray-200" style="margin-right: -12px;">
+                <svg class="w-5 h-5 text-gray-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      function renderCategoryBlocks(items) {
+        const { groups, map } = groupByCategory(items);
+        const parts = [];
+        const usedCats = new Set();
+        let gi = 0;
+        const toNum = (p) => {
+          if (typeof p === 'number' && isFinite(p)) return p;
+          const s = String(p || '').replace(/\s|\u00a0/g, '');
+          // Normalize common euro formats: "€1.234,56" or "1,234.56€"
+          const m = s.match(/([0-9.,]+)/);
+          if (!m) return Number.POSITIVE_INFINITY;
+          let num = m[1];
+          const hasComma = num.includes(',');
+          const hasDot = num.includes('.');
+          if (hasComma && hasDot) {
+            // assume dot thousands, comma decimals
+            num = num.replace(/\./g, '').replace(/,/g, '.');
+          } else if (hasComma && !hasDot) {
+            // assume comma decimals
+            num = num.replace(/,/g, '.');
+          } else {
+            // only dots -> already decimals or thousands; remove thousands
+            const parts = num.split('.');
+            if (parts.length > 2) num = parts.join('');
+          }
+          const v = parseFloat(num);
+          return isFinite(v) ? v : Number.POSITIVE_INFINITY;
+        };
+        // Determine which category has the overall lowest price
+        let bestCat = '';
+        let bestVal = Number.POSITIVE_INFINITY;
+        map.forEach((lst, cat) => {
+          const m = (lst || []).reduce((acc, it) => {
+            const v = toNum(it.price);
+            return v < acc ? v : acc;
+          }, Number.POSITIVE_INFINITY);
+          if (isFinite(m) && m < bestVal) { bestVal = m; bestCat = cat; }
+        });
+        groups.forEach(g => {
+          const lst = (map.get(g.cat) || []).slice().sort((a,b) => {
+            const an = toNum(a.price);
+            const bn = toNum(b.price);
+            return an - bn;
+          });
+          if (!lst.length) return;
+          usedCats.add(g.cat);
+          const secId = `group_sec_${gi}`;
+          const expanded = gi === 0; // only first group open by default
+          gi++;
+          parts.push(`<div class="mt-3 px-4 py-2 text-xs font-semibold rounded text-white cursor-pointer group-title flex items-center justify-between" onclick="toggleSection('${secId}')"><span>${escapeHtml(g.label)} <span class="ml-2 opacity-80">(${lst.length} ${lst.length === 1 ? 'vehicle' : 'vehicles'})</span></span>${(bestCat===g.cat)?'<span class="lowest-badge">Lowest price</span>':''}</div>`);
+          parts.push(`<div id="${secId}" data-accordion="group" class="${expanded ? '' : 'hidden'} accordion-content">${renderTableForItems(lst)}</div>`);
+        });
+        // Render any categories not in default order at the end
+        map.forEach((lst, cat) => {
+          if (usedCats.has(cat)) return;
+          if (!lst.length) return;
+          const sorted = lst.slice().sort((a,b) => toNum(a.price) - toNum(b.price));
+          const secId2 = `group_sec_${gi}`;
+          gi++;
+          parts.push(`<div class="mt-3 px-4 py-2 text-xs font-semibold rounded text-white cursor-pointer group-title flex items-center justify-between" onclick="toggleSection('${secId2}')"><span>${escapeHtml(cat)} <span class="ml-2 opacity-80">(${sorted.length} ${sorted.length === 1 ? 'vehicle' : 'vehicles'})</span></span>${(bestCat===cat)?'<span class=\"lowest-badge\">Lowest price</span>':''}</div>`);
+          parts.push(`<div id="${secId2}" data-accordion="group" class="hidden accordion-content">${renderTableForItems(sorted)}</div>`);
+        });
+        // Add an 'Other' group for items that didn't match any bucket
+        try {
+          const included = new Set();
+          map.forEach(lst => lst.forEach(it => included.add(it)));
+          const leftovers = (items || []).filter(it => !included.has(it));
+          if (leftovers.length) {
+            const sorted = leftovers.slice().sort((a,b) => toNum(a.price) - toNum(b.price));
+            const secId3 = `group_sec_${gi}`;
+            gi++;
+            parts.push(`<div class="mt-3 px-4 py-2 text-xs font-semibold rounded text-white cursor-pointer group-title" onclick="toggleSection('${secId3}')">Other <span class="ml-2 opacity-80">(${sorted.length} ${sorted.length === 1 ? 'vehicle' : 'vehicles'})</span></div>`);
+            parts.push(`<div id="${secId3}" data-accordion="group" class="hidden accordion-content">${renderTableForItems(sorted)}</div>`);
+          }
+        } catch (_) { /* no-op */ }
+        return parts.join('');
+      }
+
+      function toggleSection(id) {
+        try {
+          const el = document.getElementById(id);
+          if (!el) return;
+          const isHidden = el.classList.contains('hidden');
+          // Close siblings in the same accordion group when opening
+          if (isHidden) {
+            const container = el.parentElement;
+            if (container) {
+              const peers = container.querySelectorAll('[data-accordion="group"]');
+              peers.forEach(p => { if (p !== el) p.classList.add('hidden'); });
+            }
+            el.classList.remove('hidden');
+          } else {
+            el.classList.add('hidden');
+          }
+        } catch (_) { /* no-op */ }
+      }
+
+      function scrollToGroup(id) {
+        try {
+          const el = document.getElementById(id);
+          if (!el) {
+            console.warn('[SCROLL] Group not found:', id);
+            return;
+          }
+          
+          // Open the group if it's hidden
+          if (el.classList.contains('hidden')) {
+            const container = el.parentElement;
+            if (container) {
+              const peers = container.querySelectorAll('[data-accordion="group"]');
+              peers.forEach(p => p.classList.add('hidden'));
+            }
+            el.classList.remove('hidden');
+          }
+          
+          // Scroll to the group title (previous sibling)
+          const title = el.previousElementSibling;
+          if (title) {
+            title.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          } else {
+            el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        } catch (err) {
+          console.error('[SCROLL] Error:', err);
+        }
+      }
+
+      function imageUrlFor(it) {
+        const car = String(it.car || '').trim();
+        const supplier = String(it.supplier || '').trim();
+        // Supplier-specific overrides first
+        if (/auto\s*prudente\s*rent\s*a\s*car/i.test(supplier)) {
+          if (/(^citroen\s*c4\s*picasso\s*auto|^citroën\s*c4\s*picasso\s*auto)/i.test(car)) {
+            return 'https://www.carjet.com/cdn/img/cars/M/car_A219.jpg';
+          }
+        }
+        // Specific mappings provided by user
+        if (/^fiat\s*500\s*cabrio/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_L154.jpg';
+        if (/^fiat\s*500x(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A112.jpg';
+        if (/^fiat\s*500(?!\s*[xXlL])(?!.*cabrio)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C25.jpg';
+        if (/^renault\s*clio/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C04.jpg';
+        if (/^toyota\s*aygo(?!\s*x)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C29.jpg';
+        if (/(^citroen\s*c1|^citroën\s*c1)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C96.jpg';
+        if (/^toyota\s*yaris/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C64.jpg';
+        if (/^(vw|volkswagen)\s*golf/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F12.jpg';
+        if (/^audi\s*a1/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C42.jpg';
+        if (/^ford\s*focus/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F02.jpg';
+        if (/(^renault\s*megane|^renault\s*mégane)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F05.jpg';
+        if (/^peugeot\s*308/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F22.jpg';
+        if (/^volkswagen\s*up/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C66.jpg';
+        if (/^fiat\s*panda/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C30.jpg';
+        if (/^peugeot\s*208/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C60.jpg';
+        if (/^ford\s*ka/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_N07.jpg';
+        if (/^(vw|volkswagen)\s*polo/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C27.jpg';
+        if (/^hyundai\s*i10/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C32.jpg';
+        if (/^hyundai\s*i30/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C41.jpg';
+        if (/^hyundai\s*i20/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C52.jpg';
+        if (/^kia\s*picanto/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C59.jpg';
+        if (/^opel\s*adam/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C50.jpg';
+        if (/(^mitsubishi\s*space\s*star|^mitsubishi\s*spacestar)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C190.jpg';
+        if (/^nissan\s*micra/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C13.jpg';
+        if (/^kia\s*ceed(\s*auto)?/i.test(car)) return (/auto/i.test(car) ? 'https://www.carjet.com/cdn/img/cars/M/car_A1023.jpg' : 'https://www.carjet.com/cdn/img/cars/M/car_C21.jpg');
+        if (/^ford\s*fiesta/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C17.jpg';
+        if (/^nissan\s*juke/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F29.jpg';
+        if (/^peugeot\s*108/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C15.jpg';
+        if (/^seat\s*ibiza(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C01.jpg';
+        if (/(^citroen\s*c3|^citroën\s*c3)(?!\s*aircross)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C06.jpg';
+        if (/^ford\s*kuga/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F41.jpg';
+        if (/^renault\s*twingo/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C61.jpg';
+        if (/^peugeot\s*108\s*cabrio/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_L41.jpg';
+        if (/^(vw|volkswagen)\s*t-?cross/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F252.jpg';
+        if (/(^citroen\s*c4|^citroën\s*c4)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A17.jpg';
+        if (/^peugeot\s*3008(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A132.jpg';
+        if (/^opel\s*astra\b(?!.*\bsw\b)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F73.jpg';
+        if (/^opel\s*astra\s*sw/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_S10.jpg';
+        if (/^toyota\s*aygo\s*x/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F408.jpg';
+        if (/^kia\s*stonic/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F119.jpg';
+        if (/(^citroen\s*c3\s*aircross|^citroën\s*c3\s*aircross)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A782.jpg';
+        if (/^jeep\s*avenger/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_L164.jpg';
+        if (/^(vw|volkswagen)\s*taigo/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F352.jpg';
+        if (/^renault\s*captur/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F44.jpg';
+        if (/^hyundai\s*(kauai|kaua[ií])/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F44.jpg';
+        if (/^mitsubishi\s*asx/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F178.jpg';
+        if (/^hyundai\s*kona/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F191.jpg';
+        if (/^toyota\s*c-?hr(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A301.jpg';
+        if (/^ford\s*(eco\s*sport|ecosport)(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A606.jpg';
+        if (/^opel\s*crossland\s*x(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A444.jpg';
+        if (/^(vw|volkswagen)\s*tiguan(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A830.jpg';
+        if (/^skoda\s*karoq(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A822.jpg';
+        if (/^cupra\s*leon\s*(sw|st|estate|sport[-\s]*tourer)(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1426.jpg';
+        if (/^toyota\s*corolla\s*(sw|touring\s*sports|estate)(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A590.jpg';
+        if (/^dacia\s*lodgy\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M117.jpg';
+        if (/^opel\s*zafira\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M05.jpg';
+        if (/^ford\s*tourneo\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M44.jpg';
+        if (/^(vw|volkswagen)\s*sharan\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M56.jpg';
+        if (/^(vw|volkswagen)\s*multivan(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A406.jpg';
+        if (/^renault\s*grand\s*scenic(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M15.jpg';
+        if (/(^citroen|^citroën)\s*(c4\s*)?grand\s*picasso(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A219.jpg';
+        if (/^mercedes\s*glb(\b.*)?(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_GZ399.jpg';
+        if (/^(vw|volkswagen)\s*caddy(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A295.jpg';
+        if (/(^citroen|^citroën)\s*c5\s*aircross(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A640.jpg';
+        if (/^ds\s*4(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1637.jpg';
+        if (/^cupra\s*formentor(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1185.jpg';
+        if (/^jeep\s*renegade(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A222.jpg';
+        if (/^renault\s*arkana(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1159.jpg';
+        if (/^toyota\s*rav\s*?4(\s*4x4)?(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1000.jpg';
+        if (/^peugeot\s*2008/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F91.jpg';
+        if (/^kia\s*sportage/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F43.jpg';
+        if (/^nissan\s*qashqai/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F24.jpg';
+        if (/^skoda\s*kamiq/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F310.jpg';
+        if (/^hyundai\s*tucson/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F310.jpg';
+        if (/^renault\s*austral/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F430.jpg';
+        if (/^seat\s*ateca/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F154.jpg';
+        if (/^peugeot\s*5008/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M27.jpg';
+        if (/^toyota\s*hilux(\s*4x4)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F326.jpg';
+        if (/^peugeot\s*308\s*sw(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_S06.jpg';
+        if (/^opel\s*corsa(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A03.jpg';
+        if (/^dacia\s*jogger/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M162.jpg';
+        if (/^seat\s*(leon|león)\b(?!.*\b(sw|st|estate|sport[-\s]*tourer)\b).*$/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F39.jpg';
+        if (/^toyota\s*corolla\s*auto/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A623.jpg';
+        if (/(^mini|^miny)\s*(cooper\s*)?countryman(\s*(auto|automatic))?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F209.jpg';
+        if (/^ford\s*puma(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A999.jpg';
+        if (/^fiat\s*talento/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M49.jpg';
+        if (/^peugeot\s*rifter(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M124.jpg';
+        if (/(^citroen\s*c4\s*grand\s*spacetourer|^citroën\s*c4\s*grand\s*spacetourer)(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1430.jpg';
+        if (/^opel\s*vivaro/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M34.jpg';
+        if (/^seat\s*arona(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F194.jpg';
+        if (/^toyota\s*proace/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M136.jpg';
+        if (/(^citroen\s*c4\s*picasso\s*auto|^citroën\s*c4\s*picasso\s*auto)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A522.jpg';
+        if (/^ford\s*transit/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M02.jpg';
+        if (/^ford\s*galaxy/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M03.jpg';
+        if (/(^citroen\s*spacetourer|^citroën\s*spacetourer)(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A261.jpg';
+        if (/^renault\s*trafic(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A581.jpg';
+        if (/^peugeot\s*traveller\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M86.jpg';
+        if (/^(vw|volkswagen)\s*transporter\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M08.jpg';
+        if (/^mercedes(\s*benz)?\s*vito(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A230.jpg';
+        if (/^(vw|volkswagen)\s*caravelle\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M63.jpg';
+        if (/^mercedes(\s*benz)?\s*v\s*class(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1336.jpg';
+        if (/(^citroen\s*c4\s*cactus|^citroën\s*c4\s*cactus)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C51.jpg';
+        if (/^renault\s*clio\s*sw/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C54.jpg';
+        if (/(^mazda\s*cx[- ]?3)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F179.jpg';
+        if (/^skoda\s*octavia\b(\s*(sw|combi|estate))?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_I12.jpg';
+        if (/^skoda\s*fabia\b\s*(sw|combi|estate)\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_S34.jpg';
+        if (/^(vw|volkswagen)\s*passat\b(\s*(variant|estate|sw))?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg';
+        if (/^fiat\s*tipo\b\s*(sw|estate)\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F72.jpg';
+        if (/^peugeot\s*508\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F65.jpg';
+        if (/^seat\s*leon\s*(sw|st|estate|sport[-\s]*tourer)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F46.jpg';
+        if (/^(vw|volkswagen)\s*beetle\s*cabrio/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_L44.jpg';
+        if (/^(mini|miny)\s*(cooper|one)\s*cabrio/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_L118.jpg';
+        if (/^skoda\s*scala/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C166.jpg';
+        if (/^fiat\s*500l/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C43.jpg';
+        if (/dacia\s*sandero/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C75.jpg';
+        return it.photo || '';
+      }
+
+      function imgTagFor(it, kind) {
+        const mapped = (typeof imageUrlFor === 'function') ? imageUrlFor(it) : '';
+        const src = mapped || (it && it.image_url) || `/ph?car=${encodeURIComponent((it && it.car) || 'Car')}`;
+        const alt = (it && it.car) || 'Car';
+        if (kind === 'table') {
+          return `<img src="${src}" alt="${escapeHtml(alt)}" class="h-10 w-auto"/>`;
+        }
+        return `<img src="${src}" alt="${escapeHtml(alt)}" class="h-14 w-auto"/>`;
+      }
+
+      function displaySupplierName(name) {
+        const s = String(name || '').trim();
+        if (!s) return '';
+        
+        // Extract code from image path if present (ex: /cdn/img/prv/flat/mid/logo_SAD.png → SAD)
+        const imgMatch = s.match(/logo_([A-Z0-9]+)\.(png|jpg|avif|webp)/i);
+        if (imgMatch) {
+          const code = imgMatch[1].toUpperCase();
+          // Map image codes to supplier names
+          const imgCodeMap = {
+            // TODOS os 51 suppliers do CarJet (extraídos do atributo title)
+            'ABB': 'Abbycar',
+            'ABB1': 'Abbycar',
+            'ACE': 'Ace Rent a Car',
+            'ADA': 'Ada',
+            'AIR': 'Airauto',
+            'ALM': 'Alamo',
+            'AMI': 'Amigoautos',
+            'AMI1': 'Amigoautos',
+            'ATR': 'Autorent',
+            'AUP': 'Auto Prudente',
+            'AUU': 'Auto Union',
+            'AVX': 'Avis',
+            'BGX': 'Budget',
+            'BSD': 'Best Deal',
+            'CAE': 'Cael',
+            'CEN': 'Centauro',
+            'D4F': 'Drive4fun',
+            'DOH': 'Drive on Holidays',
+            'DTG': 'Dollar',
+            'DTG1': 'Rent a Car',
+            'DVM': 'Drive4move',
+            'ECR': 'Europcar',
+            'ENT': 'Enterprise',
+            'EPI': 'Epi',
+            'EU2': 'Goldcar',
+            'EUK': 'Goldcar Keyn Go',
+            'EUR': 'Goldcar',
+            'FFX': 'Firefly',
+            'FLZ': 'Flizzr by Sixt',
+            'GMO': 'Green Motion',
+            'GMO1': 'Green Motion',
+            'GUE': 'Guerin',
+            'HER': 'Hertz',
+            'ICT': 'International',
+            'KED': 'Keddy by Europcar',
+            'KLA': 'Klass Wagen',
+            'LOC': 'Million',
+            'MVY': 'Movyng',
+            'NAT': 'National',
+            'OKR': 'OK Mobility',
+            'OKR1': 'OK Mobility',
+            'PAR': 'Paa',
+            'REC': 'Record',
+            'RNA': 'Rentauto',
+            'SAD': 'Drivalia',
+            'SUR': 'Surprice',
+            'SVN': 'Sevens',
+            'SXT': 'Sixt',
+            'TAN': 'Tangerine Rent a Car',
+            'TAN1': 'Rent a Car',
+            'THR': 'Thrifty',
+            'YES': 'Yescar',
+            'YNO': 'Ynot',
+            // Aliases e variantes
+            'DGT': 'Dollar', 'DGT1': 'Rent a Car',
+            'GRE': 'Green Motion', 'GRM': 'Green Motion',
+            'YNOT': 'Ynot',
+            'CAL': 'Caleche', 'CAR': 'Carnect', 'CLA': 'Caldera',
+            'LOZ': 'Millioncarhire', 'LCR': 'Localcar', 'MIL': 'Millioncarhire',
+            'SEV': 'Sevenseas'
+          };
+          if (imgCodeMap[code]) return imgCodeMap[code];
+          
+          // Fallback: Se não encontrar, retornar código formatado
+          console.warn('[SUPPLIER] Unknown code:', code, 'from:', s);
+          return code;
+        }
+        
+        const up = s.toUpperCase().replace(/\s+/g, ' ').trim();
+        
+        // Known code → name mappings
+        const codeMap = {
+          AUP: 'Auto Prudente', SAD: 'Drivalia',
+          THR: 'Thrifty', ECR: 'Europcar', HER: 'Hertz',
+          CEN: 'Centauro', OKR: 'OK Mobility', SUR: 'Surprice',
+          TAN: 'TAN', TAN1: 'TAN', YNO: 'YNO Rent a Car',
+          ICT: 'Interrent', BGX: 'Budget', SVN: 'Sevens',
+          GMO: 'Green Motion', GMO1: 'Green Motion', KLA: 'Klass Wagen',
+          AMI1: 'Amigos', DVM: 'Drive on Holidays', AVS: 'Avis',
+          FIR: 'Firefly', KEA: 'KEA Rent', RCR: 'Rhodium', SXR: 'Sixt'
+        };
+        
+        // Direct code or code embedded in text
+        const m = up.match(/\b(AUP|SAD|THR|ECR|HER|CEN|OKR|SUR|TAN1?|YNO|ICT|BGX|SVN|GMO1?|KLA|AMI1?|DVM|AVS|FIR|KEA|RCR|SXR)\b/);
+        if (m && codeMap[m[1]]) return codeMap[m[1]];
+        
+        // Normalize common textual variants
+        if (/^AUTO\s*PRUDENTE\b/.test(up)) return 'Auto Prudente';
+        if (/^OK\s*(RENT|MOBILITY)\b/.test(up)) return 'OK Mobility';
+        if (/^CENTAURO\b/.test(up)) return 'Centauro';
+        if (/^EUROPCAR\b/.test(up)) return 'Europcar';
+        if (/^HERTZ\b/.test(up)) return 'Hertz';
+        if (/^THRIFTY\b/.test(up)) return 'Thrifty';
+        if (/^SURPRICE\b/.test(up)) return 'Surprice';
+        if (/^GOLDCAR\b/.test(up)) return 'Goldcar';
+        if (/^SIXT\b/.test(up)) return 'Sixt';
+        if (/^BUDGET\b/.test(up)) return 'Budget';
+        if (/^KLASS\s*WAGEN\b/.test(up)) return 'Klass Wagen';
+        if (/^AMIGOS\b/.test(up)) return 'Amigos';
+        if (/^DRIVE\s*ON\s*HOLIDAYS\b/.test(up)) return 'Drive on Holidays';
+        if (/^INTERRENT\b/.test(up)) return 'Interrent';
+        
+        // Fallback to original
+        return s;
+      }
+
+      function displayCategory(it) {
+        // Retornar a categoria original (Economy, SUV, Mini, etc)
+        // NÃO mostrar o código do grupo (B1, D, F, etc)
+        if (it.category) {
+          return it.category;
+        }
+        
+        // FALLBACK: Se não tiver 'group', tentar mapear localmente
+        const car = String(it.car || '').toLowerCase();
+        const cat = String(it.category || '').toLowerCase();
+        const transmission = String(it.transmission || it.gearbox || it.gear || it.trans || it.gear_type || it.shift || '').toLowerCase();
+        const details = String(it.details || '').toLowerCase();
+        
+        // B1 vs B2 - Mini 4 Lugares vs Mini 5 Lugares
+        // B1: Fiat 500, Peugeot 108, C1, VW Up, Kia Picanto, Toyota Aygo (4 lugares)
+        if (/^(fiat\s*500|peugeot\s*108|citroen\s*c1|citroën\s*c1|vw\s*up|volkswagen\s*up|kia\s*picanto|toyota\s*aygo)\b(?!.*x)(?!.*cabrio)/i.test(car)) {
+          // Se é automático → E1
+          if (/auto|automatic|automático|automatico/i.test(car + ' ' + cat + ' ' + transmission)) {
+            return 'Group E1';
+          }
+          return 'Group B1';
+        }
+        // B2: Fiat Panda, Hyundai i10, etc (5 lugares)
+        if (/^(fiat\s*panda|hyundai\s*i10)/i.test(car)) return 'Group B2';
+        
+        // Specific overrides
+        if (/^peugeot\s*308\b.*\bauto(matic)?\b/.test(car)) return 'Group E2';
+        if (/^fiat\s*500l\b/.test(car)) return 'Group J1';
+        if (/\bkia\s*ceed\b/.test(car)) return 'Group D';
+        if (/(^mini|^miny)\s*(cooper\s*)?countryman\b/.test(car)) return 'Group G';
+        if (/^(vw|volkswagen)\s*caddy\b.*\bauto(matic)?\b/.test(car)) return 'Group M2';
+        if (/^peugeot\s*rifter\b/.test(car)) return 'Group M1';
+        if (/(^citroen|^citroën)\s*c1\b.*\bauto(matic)?\b/.test(car)) return 'Group E1';
+        // Citroen C3 Aircross: Automatic -> L1 (SUV Automatic); else -> J1 (Crossover)
+        if (/(^citroen|^citroën)\s*c3\s*aircross\b/.test(car)) {
+          const isAutoC3 = ( /\bauto(matic|\.)?\b/.test(car) || /\bauto(matic|\.)?\b/.test(cat) || /\bauto(matic|\.)?\b/.test(transmission) || /\bauto(matic|\.)?\b/.test(details)
+            || /(automático|automatica|automatico|automatik)/i.test(car+" "+cat+" "+transmission+" "+details)
+            || /\bA\/?T\b/i.test(car+" "+cat+" "+transmission+" "+details) );
+          return isAutoC3 ? 'Group L1' : 'Group J1';
+        }
+        // Peugeot 5008 is a 7 seater -> Group M1
+        if (/^peugeot\s*5008\b/.test(car)) return 'Group M1';
+        // Fiat 500X: manual -> J1 (Crossover), automatic -> L1 (SUV Automatic)
+        if (/^fiat\s*500x\b/.test(car)) {
+          const isAuto500x = ( /\bauto(matic|\.)?\b/.test(car) || /\bauto(matic|\.)?\b/.test(cat) || /\bauto(matic|\.)?\b/.test(transmission) || /\bauto(matic|\.)?\b/.test(details)
+            || /(automático|automatica|automatico|automatik)/i.test(car+" "+cat+" "+transmission+" "+details)
+            || /\bA\/?T\b/i.test(car+" "+cat+" "+transmission+" "+details) );
+          return isAuto500x ? 'Group L1' : 'Group J1';
+        }
+        // VW T-Cross: manual -> J1 (Crossover), automatic -> L1 (SUV Automatic)
+        if (/^(vw|volkswagen)\s*t\s*-?\s*cross\b/.test(car)) {
+          const isAutoTCross = ( /\bauto(matic|\.)?\b/.test(car) || /\bauto(matic|\.)?\b/.test(cat) || /\bauto(matic|\.)?\b/.test(transmission) || /\bauto(matic|\.)?\b/.test(details)
+            || /(automático|automatica|automatico|automatik)/i.test(car+" "+cat+" "+transmission+" "+details)
+            || /\bA\/?T\b/i.test(car+" "+cat+" "+transmission+" "+details) );
+          return isAutoTCross ? 'Group L1' : 'Group J1';
+        }
+        // Peugeot 308 SW Automatic -> Station Wagon Automatic (L2)
+        if (/^peugeot\s*308\s*sw\b/.test(car) && (
+            /\bauto(matic|\.)?\b/.test(car) || /\bauto(matic|\.)?\b/.test(cat) || /\bauto(matic|\.)?\b/.test(transmission) || /\bauto(matic|\.)?\b/.test(details)
+            || /(automático|automatica|automatico|automatik)/i.test(car+" "+cat+" "+transmission+" "+details)
+            || /\bA\/?T\b/i.test(car+" "+cat+" "+transmission+" "+details)
+          )) return 'Group L2';
+        // Generic rules
+        const auto = (
+          /\bauto(matic|\.)?\b/.test(car) || /\bauto(matic|\.)?\b/.test(cat) || /\bauto(matic|\.)?\b/.test(transmission) || /\bauto(matic|\.)?\b/.test(details)
+          || /(automático|automatica|automatico|automatik)/i.test(car+" "+cat+" "+transmission+" "+details)
+          || /\bA\/?T\b/i.test(car+" "+cat+" "+transmission+" "+details)
+        );
+        const isL1Model = (
+          (/\bcrossland\s*x\b/.test(car)) ||
+          (/\beco\s*sport\b/.test(car) || /\becosport\b/.test(car)) ||
+          (/\barona\b/.test(car)) ||
+          (/(^|\b)(vw|volkswagen)\s*taigo\b/.test(car) || /\btaigo\b/.test(car)) ||
+          (/\bjuke\b/.test(car)) ||
+          (/\bstonic\b/.test(car))
+        );
+        if (auto && isL1Model) return 'Group L1';
+        return it.category || '';
+      }
+
+      function renderSupplierLogo(supplier) {
+        const supplierName = displaySupplierName(supplier);
+        const logoUrl = getSupplierLogo(supplierName);
+        
+        // Verificar se é não reembolsável (detecta HTML entities também)
+        const rawSupplier = String(supplier || '');
+        const isTAN1 = /logo_TAN1\./i.test(rawSupplier) || supplierName === 'Rent a Car';
+        const isNonRefundable = isTAN1 || /não\s*reembols[aá]vel|non[- ]?refundable|nr\b|n&#227;o\s*reembols&#225;vel/i.test(supplierName + ' ' + rawSupplier);
+        const asterisk = isNonRefundable ? '<span style="position:absolute; top:-2px; right:-2px; color:#ff0000; font-weight:bold; font-size:16px;" title="Não reembolsável">*</span>' : '';
+        
+        if (logoUrl) {
+          return `<div style="position:relative; display:inline-block;"><img src="${logoUrl}" alt="${escapeHtml(supplierName)}" title="${escapeHtml(supplierName)}" class="h-5 w-auto max-w-[80px] object-contain" loading="lazy" decoding="async" onerror="this.style.display='none';" />${asterisk}</div>`;
+        } else {
+          return `<span class="text-xs">${escapeHtml(supplierName)}</span>`;
+        }
+      }
+
+      function renderCardsForItems(items) {
+        return `
+          <div class="grid grid-cols-1 gap-3">
+            ${(items || []).map((it, idx) => `
+              <div class="rounded-md border bg-white ${(/auto prudente/i.test(it.supplier||'')) ? 'auto-prudente' : ''}" style="${(/auto prudente/i.test(it.supplier||'')) ? 'background-color: var(--brand-teal-20);' : ''}" data-supplier="${escapeHtml(displaySupplierName(it.supplier))}">
+                <div class="flex items-center gap-3 p-3">
+                  ${imgTagFor(it, 'card')}
+                  <div class="min-w-0 flex-1">
+                    <div class="text-xs text-gray-500 flex items-center">${renderSupplierLogo(it.supplier)}</div>
+                    <div class="text-sm font-medium text-gray-900 truncate">${escapeHtml(it.car || '-')}</div>
+                    <div class="text-xs text-gray-600">${escapeHtml(displayCategory(it))}</div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-sm font-semibold text-gray-900">${escapeHtml(it.price || '')}</div>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>`;
+      }
+
+      function renderTableForItems(items) {
+        return `
+          <div>
+            <div class="hidden md:block overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-[#009cb6]">
+                  <tr>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-white uppercase">#</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-white uppercase">Photo</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-white uppercase">Supplier</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-white uppercase">Car</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-white uppercase">Category</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-white uppercase">Total Price</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white">
+                  ${(items || []).map((it, idx) => `
+                    <tr class="${(/auto prudente/i.test(it.supplier||'')) ? '' : ''}" style="${(/auto prudente/i.test(it.supplier||'')) ? 'background-color: var(--brand-teal-20);' : ''}" data-supplier="${escapeHtml(displaySupplierName(it.supplier))}">
+                      <td class="px-4 py-2 text-sm text-gray-600">${idx + 1}</td>
+                      <td class="px-4 py-2 text-sm">
+                        ${imgTagFor(it, 'table')}
+                      </td>
+                      <td class="px-4 py-2 text-sm">${renderSupplierLogo(it.supplier)}</td>
+                      <td class="px-4 py-2 text-sm">${escapeHtml(it.car || '-')}</td>
+                      <td class="px-4 py-2 text-sm">${escapeHtml(displayCategory(it))}</td>
+                      <td class="px-4 py-2 text-sm font-medium">${escapeHtml(it.price || '')}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+            <div class="block md:hidden">${renderCardsForItems(items)}</div>
+          </div>`;
+      }
+
+      // Track-by-Date removed; renderTrackResults omitted
+
+      function renderChips(containerId, daysList, onChange) {
+        const cont = document.getElementById(containerId);
+        if (!cont) return;
+        cont.classList.remove('hidden');
+        cont.innerHTML = '';
+        
+        // Verificar quais estão em cache
+        const locEl = document.getElementById('location');
+        const sdEl = document.getElementById('startDate');
+        const location = (locEl && locEl.value || '').trim();
+        const pickup_date = sdEl && sdEl.value || '';
+        
+        for (const d of daysList) {
+          const btn = document.createElement('button');
+          const isSelected = d === window.selectedDays;
+          const cacheKey = getCacheKey(location, pickup_date, d);
+          const isCached = location && pickup_date && cachedResults[cacheKey];
+          
+          // Azul quando tem cache, Amarelo quando selecionado ou hover
+          if (isSelected) {
+            btn.className = 'px-2.5 py-1 border text-xs font-medium transition-colors bg-[#f4ad0f] text-white border-[#f4ad0f]';
+          } else if (isCached) {
+            btn.className = 'px-2.5 py-1 border text-xs font-medium transition-colors bg-[#009cb6] text-white border-[#009cb6] hover:bg-[#f4ad0f] hover:border-[#f4ad0f]';
+          } else {
+            btn.className = 'px-2.5 py-1 border text-xs font-medium transition-colors bg-white text-gray-700 border-gray-300 hover:bg-[#f4ad0f] hover:text-white hover:border-[#f4ad0f]';
+          }
+          
+          btn.innerHTML = d + 'd';
+          btn.title = isCached ? 'Download feito (instantâneo)' : 'Clique para carregar';
+          btn.addEventListener('click', async (e) => { 
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('[CHIP] Clicado:', d, 'dias');
+            
+            // Atualizar selectedDays e input
+            window.selectedDays = d;
+            const daysInput = document.getElementById('days');
+            if (daysInput) daysInput.value = String(d);
+            
+            // Re-renderizar chips para mostrar seleção
+            const chipsCont = document.getElementById('daysChips');
+            const locEl = document.getElementById('location');
+            const sdEl = document.getElementById('startDate');
+            const loc = (locEl && locEl.value || '').trim();
+            const date = sdEl && sdEl.value || '';
+            
+            if (chipsCont) {
+              Array.from(chipsCont.children).forEach((chipBtn, idx) => {
+                const dayValue = daysList[idx];
+                const isCached = cachedResults[getCacheKey(loc, date, dayValue)];
+                if (dayValue === d) {
+                  chipBtn.className = 'px-2.5 py-1 border text-xs font-medium transition-colors bg-[#f4ad0f] text-white border-[#f4ad0f]';
+                  chipBtn.innerHTML = dayValue + 'd';
+                } else if (isCached) {
+                  chipBtn.className = 'px-2.5 py-1 border text-xs font-medium transition-colors bg-[#009cb6] text-white border-[#009cb6] hover:bg-[#f4ad0f] hover:border-[#f4ad0f]';
+                  chipBtn.innerHTML = dayValue + 'd';
+                } else {
+                  chipBtn.className = 'px-2.5 py-1 border text-xs font-medium transition-colors bg-white text-gray-700 border-gray-300 hover:bg-[#f4ad0f] hover:text-white hover:border-[#f4ad0f]';
+                  chipBtn.innerHTML = dayValue + 'd';
+                }
+              });
+            }
+            
+            // Se estiver em cache, renderizar resultados instantaneamente
+            const key = getCacheKey(loc, date, d);
+            if (cachedResults[key]) {
+              console.log('[CACHE] Encontrado! Renderizando...');
+              const resultsEl = document.getElementById('results');
+              const data = cachedResults[key];
+              const items = Array.isArray(data.items) ? data.items : [];
+              
+              if (resultsEl) {
+                resultsEl.innerHTML = '';
+                const section = document.createElement('div');
+                section.className = 'rounded-md border';
+                
+                const html = [];
+                html.push(`<div class="px-4 py-2 bg-gray-50 text-sm font-medium">${d} day(s) — ${escapeHtml(loc)} <span class="text-green-600 font-semibold ml-2">(${items.length} ${items.length === 1 ? 'vehicle' : 'vehicles'})</span> <span class="text-blue-600 ml-2">⚡ Cache</span></div>`);
+                
+                if (items.length === 0) {
+                  html.push(`<div class="px-4 py-3 text-center text-gray-600"><p class="mb-2">⚠️ No results found</p></div>`);
+                } else {
+                  html.push(renderCategoryPreview(items));
+                  html.push(`<div class="px-4 py-2 bg-gray-50 text-sm font-medium">Grouped by Category</div>`);
+                  html.push(renderCategoryBlocks(items));
+                  // Mostrar filtros de suppliers após resultados
+                  showSupplierFilters(items);
+                }
+                
+                section.innerHTML = html.join('');
+                resultsEl.appendChild(section);
+                console.log('[RENDER] Cache rendered:', items.length, 'vehicles');
+              }
+            } else {
+              console.log('[CHIP] Not in cache. Use the Search button.');
+            }
+          });
+          cont.appendChild(btn);
+        }
+      }
+      const fetchAllBtn = document.getElementById('fetchAllBtn');
+      function debounce(fn, wait){ let t; return function(...args){ clearTimeout(t); t = setTimeout(() => fn.apply(this, args), wait); }; }
+      let fetchInFlight = false;
+      
+      // Função para carregar logos dinamicamente
+      function loadDynamicLogos() {
+        const container = document.getElementById('loadingLogos');
+        if (!container) return;
+        
+        // Lista de logos disponíveis (Auto Prudente sempre primeiro)
+        const allLogos = [
+          { code: 'AUP', file: 'logo_AUP.png', name: 'Auto Prudente' },
+          { code: 'THR', file: 'logo_THR.png.avif', name: 'Thrifty' },
+          { code: 'ECR', file: 'logo_ECR.png.avif', name: 'Europcar' },
+          { code: 'HER', file: 'logo_HER.png', name: 'Hertz' },
+          { code: 'BGX', file: 'logo_BGX.png.avif', name: 'Budget' },
+          { code: 'CEN', file: 'logo_CEN.png.avif', name: 'Centauro' },
+          { code: 'OKR', file: 'logo_OKR.png', name: 'OK Mobility' },
+          { code: 'SUR', file: 'logo_SUR.png', name: 'Surprice' },
+          { code: 'TAN', file: 'logo_TAN.png', name: 'Tangerine' },
+          { code: 'SXT', file: 'logo_SXT.png', name: 'Sixt' },
+          { code: 'YNO', file: 'logo_YNO.png.avif', name: 'Ynot' },
+          { code: 'ICT', file: 'logo_ICT.png', name: 'Interrent' }
+        ];
+        
+        // Selecionar 11 logos aleatórios (excluindo AUP que já está garantido)
+        const otherLogos = allLogos.slice(1); // Remove AUP
+        const shuffled = otherLogos.sort(() => 0.5 - Math.random());
+        const selected = [allLogos[0], ...shuffled.slice(0, 11)]; // AUP + 11 aleatórios
+        
+        // Criar 3 linhas de 4 logos
+        let html = '';
+        for (let i = 0; i < 3; i++) {
+          html += '<div class="logos-grid-4"' + (i > 0 ? ' style="margin-top: 8px;"' : '') + '>';
+          for (let j = 0; j < 4; j++) {
+            const idx = i * 4 + j;
+            if (idx < selected.length) {
+              const logo = selected[idx];
+              html += `<div class="logo-badge"><img src="/static/logos/${logo.file}" alt="${logo.code}" title="${logo.name}"/></div>`;
+            }
+          }
+          html += '</div>';
+        }
+        
+        container.innerHTML = html;
+      }
+      
+      // Tornar global para poder chamar dos chips
+      window.runBulkFetch = async function runBulkFetch(e){
+        if (e && e.preventDefault) e.preventDefault();
+        if (fetchInFlight) {
+          console.log('⚠️ Fetch já em andamento, ignorando...');
+          return;
+        }
+        const status = document.getElementById('status');
+        const results = document.getElementById('results');
+        const locEl = document.getElementById('location');
+        const sdEl = document.getElementById('startDate');
+        const stEl = document.getElementById('startTime');
+        // end date/time are computed in background and hidden; request will use days only
+        const daysEl = document.getElementById('days');
+        const location = (locEl && locEl.value || '').trim();
+        const pickup_date = sdEl && sdEl.value || '';
+        const start_time = stEl && (stEl.value || '15:00') || '15:00';
+        const days = parseInt((daysEl && daysEl.value) || '0', 10) || 0;
+        console.log('[FETCH] Iniciado - Location:', location, 'Pickup Date:', pickup_date, 'Days:', days);
+        
+        if (!location || !pickup_date || !days){
+          console.log('[FETCH] Parâmetros inválidos');
+          if (status) status.textContent = 'Preencha local, data de início e dias ou data de fim.';
+          return;
+        }
+        
+        // Verificar se está em cache
+        const cacheKey = getCacheKey(location, pickup_date, days);
+        console.log('[CACHE] Key:', cacheKey, '| Existe?', !!cachedResults[cacheKey]);
+        
+        if (cachedResults[cacheKey]) {
+          console.log('[CACHE] Usando cache para', days, 'dias');
+          const data = cachedResults[cacheKey];
+          const items = Array.isArray(data.items) ? data.items : [];
+          console.log('[CACHE]', items.length, 'items | Primeiro:', items[0]?.car, items[0]?.price);
+          
+          if (results) results.innerHTML = '';
+          
+          const section = document.createElement('div');
+          section.className = 'rounded-md border';
+          const inner = [];
+          inner.push(`<div class=\"px-4 py-2 bg-gray-50 text-sm font-medium\">${(data.days ?? '-')} day(s) — ${escapeHtml(data.location || '-')} <span class=\"text-green-600 font-semibold ml-2\">(${items.length} ${items.length === 1 ? 'vehicle' : 'vehicles'})</span> <span class=\"text-blue-600 ml-2\">⚡ Cache</span><\/div>`);
+          
+          if (items.length === 0) {
+            inner.push(`<div class=\"px-4 py-3 text-center text-gray-600\"><p class="mb-2">⚠️ No results found</p><\/div>`);
+          } else {
+            inner.push(renderCategoryPreview(items));
+            inner.push(`<div class=\"px-4 py-2 bg-gray-50 text-sm font-medium\">Grouped by Category<\/div>`);
+            inner.push(renderCategoryBlocks(items));
+            // Mostrar filtros de suppliers após resultados
+            showSupplierFilters(items);
+          }
+          
+          section.innerHTML = inner.join('');
+          if (results) {
+            results.appendChild(section);
+            console.log('[RENDER] Completo do cache');
+          }
+          return;
+        }
+        
+        fetchInFlight = true;
+        fetchAllBtn.disabled = true; fetchAllBtn.classList.add('opacity-50','cursor-not-allowed');
+        if (status) status.textContent = '';
+        if (results) results.innerHTML = '';
+        const modal = document.getElementById('loadingModal');
+        const bar = document.querySelector('#loadingModal .progress .bar');
+        if (modal) { 
+          modal.classList.add('loading'); 
+          modal.classList.remove('hidden'); 
+          loadDynamicLogos(); // Carregar logos dinamicamente
+        }
+        // Progressive loading bar controller
+        let progTimer = null;
+        function setBarWidth(p){ try { if (bar) bar.style.width = Math.max(0, Math.min(100, p)) + '%'; } catch(_){} }
+        let prog = 5; // start at 5%
+        setBarWidth(prog);
+        try { if (progTimer) clearInterval(progTimer); } catch(_){}
+        progTimer = setInterval(() => {
+          try {
+            // Progressive animation até 100% (mais lento perto do fim)
+            if (prog < 100) {
+              let step;
+              if (prog < 30) step = 2;        // rápido no início
+              else if (prog < 60) step = 1.5; // médio
+              else if (prog < 85) step = 1;   // lento
+              else step = 0.3;                // muito lento perto do fim
+              prog = Math.min(100, prog + step);
+              setBarWidth(prog);
+            }
+          } catch(_){}
+        }, 200);
+        try {
+          // CORRECTED: startDate is already the pickup date, use it directly
+          const body = { location, start_date: pickup_date, start_time, days, lang: 'pt', currency: 'EUR' };
+          async function doFetchOnce() {
+            const resp = await fetch('/api/track-by-params', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', cache: 'no-store', redirect: 'follow', body: JSON.stringify(body) });
+            if (resp.status === 401) throw new Error('unauthorized');
+            let json;
+            try { json = await resp.json(); }
+            catch(_) { throw new Error('non_json'); }
+            if (!json || json.ok === false) {
+              const err = (json && json.error ? String(json.error) : '').toLowerCase();
+              if (err.includes('unauthorized')) throw new Error('unauthorized');
+              throw new Error((json && json.error) || 'Erro');
+            }
+            return json;
+          }
+          let data;
+          const attempts = [0, 500]; // Simplified: only 2 fast attempts
+          for (let i=0; i<attempts.length; i++) {
+            if (attempts[i] > 0) await new Promise(r=>setTimeout(r, attempts[i]));
+            try {
+              data = await doFetchOnce();
+              break;
+            } catch(_) { data = undefined; }
+          }
+          if (!data) throw new Error('Não foi possível obter resultados. Tente novamente.');
+          const items = Array.isArray(data.items) ? data.items : [];
+          
+          // DEBUG: Log server response
+          console.log('[SERVER RESPONSE]', {
+            location: data.location,
+            days: data.days,
+            start_date: data.start_date,
+            itemCount: items.length,
+            firstPrice: items[0]?.price
+          });
+          
+          // Salvar no cache para uso futuro
+          const cacheKey = getCacheKey(location, pickup_date, days);
+          cachedResults[cacheKey] = data;
+          console.log('[CACHE SAVE]', cacheKey, '→', items.length, 'items');
+          
+          const section = document.createElement('div');
+          section.className = 'rounded-md border';
+          const inner = [];
+          // Mostrar aviso se houver
+          if (data.warning) {
+            inner.push(`<div class=\"px-4 py-3 bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 text-sm\">${escapeHtml(data.warning)}<\/div>`);
+          }
+          
+          inner.push(`<div class=\"px-4 py-2 bg-gray-50 text-sm font-medium\">${(data.days ?? '-') } day(s) — ${escapeHtml(data.location || '-')} <span class=\"text-green-600 font-semibold ml-2\">(${items.length} ${items.length === 1 ? 'vehicle' : 'vehicles'})</span><\/div>`);
+          
+          if (items.length === 0) {
+            inner.push(`<div class=\"px-4 py-3 text-center text-gray-600\">
+              <p class="mb-2">⚠️ No results found</p>
+              <p class="text-sm">Session may have expired. Please try again.</p>
+            <\/div>`);
+          } else {
+            inner.push(renderCategoryPreview(items));
+            inner.push(`<div class=\"px-4 py-2 bg-gray-50 text-sm font-medium\">Grouped by Category<\/div>`);
+            inner.push(renderCategoryBlocks(items));
+            // Mostrar filtros de suppliers após resultados
+            showSupplierFilters(items);
+          }
+          
+          section.innerHTML = inner.join('');
+          if (results) results.appendChild(section);
+        } catch (err) {
+          if (status) status.textContent = 'Falha: ' + err;
+        } finally {
+          fetchInFlight = false; fetchAllBtn.disabled = false; fetchAllBtn.classList.remove('opacity-50','cursor-not-allowed');
+          // Garantir que barra chegue a 100% suavemente
+          if (prog < 100) {
+            const finalInterval = setInterval(() => {
+              if (prog < 100) {
+                prog = Math.min(100, prog + 2);
+                setBarWidth(prog);
+              } else {
+                clearInterval(finalInterval);
+              }
+            }, 50);
+          }
+          // Fechar modal depois que barra chegar a 100%
+          setTimeout(() => {
+            if (modal) { modal.classList.remove('loading'); modal.classList.add('hidden'); setBarWidth(0); prog = 0; }
+            try { if (progTimer) clearInterval(progTimer); } catch(_){ }
+          }, prog >= 100 ? 300 : 1000);
+        }
+      }
+      if (fetchAllBtn && !fetchAllBtn._bound) { fetchAllBtn.addEventListener('click', window.runBulkFetch); fetchAllBtn._bound = true; }
+      try { const pf = document.getElementById('paramForm'); if (pf && !pf._bound) { pf.addEventListener('submit', window.runBulkFetch); pf.addEventListener('keydown', (e)=>{ if (e.key==='Enter') { e.preventDefault(); window.runBulkFetch(e); } }); pf._bound = true; } } catch(_) {}
+
+      // Search All Days - pesquisar 1,2,3,4 dias
+      const searchAllDaysBtn = document.getElementById('searchAllDaysBtn');
+      if (searchAllDaysBtn && !searchAllDaysBtn._bound) {
+        searchAllDaysBtn.addEventListener('click', async () => {
+          const locEl = document.getElementById('location');
+          const sdEl = document.getElementById('startDate');
+          const stEl = document.getElementById('startTime');
+          const daysInput = document.getElementById('days');
+          
+          const location = (locEl && locEl.value || '').trim();
+          const pickup_date = sdEl && sdEl.value || '';
+          const start_time = stEl && (stEl.value || '15:00') || '15:00';
+          
+          if (!location || !pickup_date) {
+            showCustomAlert('Preencha local e data primeiro', 'warning');
+            return;
+          }
+          
+          const daysList = [1,2,3,4,5,6,7,8,9,14,22,28,31,60];
+          searchAllDaysBtn.disabled = true;
+          
+          for (let i = 0; i < daysList.length; i++) {
+            const days = daysList[i];
+            
+            // Mostrar progresso no botão (sem contagem, já temos visual nos chips)
+            searchAllDaysBtn.innerHTML = `<svg class="w-4 h-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Downloading ${days}d`;
+            
+            try {
+              const body = { location, start_date: pickup_date, start_time, days, lang: 'pt', currency: 'EUR' };
+              console.log(`[SEARCH ALL] ${days}d - Fetching...`);
+              
+              const resp = await fetch('/api/track-by-params', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                cache: 'no-store',
+                body: JSON.stringify(body)
+              });
+              
+              if (resp.ok) {
+                const data = await resp.json();
+                if (data.items && data.items.length > 0) {
+                  const cacheKey = getCacheKey(location, pickup_date, days);
+                  cachedResults[cacheKey] = data;
+                  console.log(`[SEARCH ALL] ${days}d - ${data.items.length} items cached at key:`, cacheKey);
+                  
+                  // Atualizar chip para azul imediatamente após download
+                  const chipsCont = document.getElementById('daysChips');
+                  if (chipsCont) {
+                    const chipIndex = daysList.indexOf(days);
+                    if (chipIndex >= 0 && chipsCont.children[chipIndex]) {
+                      const chip = chipsCont.children[chipIndex];
+                      const isSelected = days === window.selectedDays;
+                      if (!isSelected) {
+                        chip.className = 'px-2.5 py-1 border text-xs font-medium transition-colors bg-[#009cb6] text-white border-[#009cb6] hover:bg-[#f4ad0f] hover:border-[#f4ad0f]';
+                      }
+                    }
+                  }
+                }
+              }
+            } catch (err) {
+              console.error(`[SEARCH ALL] ${days}d - Error:`, err);
+            }
+          }
+          
+          // Restaurar botão
+          searchAllDaysBtn.disabled = false;
+          searchAllDaysBtn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg> Search All Days';
+          
+          // Selecionar automaticamente 1 dia e mostrar resultados
+          if (daysInput) daysInput.value = 1;
+          updateDaysChips();
+          
+          // Mostrar resultados de 1 dia automaticamente
+          if (cachedResults[1] && cachedResults[1].length > 0) {
+            displayResults(cachedResults[1]);
+            displayPreview(cachedResults[1]);
+          }
+        });
+        searchAllDaysBtn._bound = true;
+      }
+
+      // Fetch All Days - pré-carregar todos os períodos
+      const fetchAllDaysBtn = document.getElementById('fetchAllDaysBtn');
+      const fetchAllStatus = document.getElementById('fetchAllStatus');
+      
+      if (fetchAllDaysBtn && !fetchAllDaysBtn._bound) {
+        fetchAllDaysBtn.addEventListener('click', async () => {
+          const locEl = document.getElementById('location');
+          const sdEl = document.getElementById('startDate');
+          const stEl = document.getElementById('startTime');
+          
+          const location = (locEl && locEl.value || '').trim();
+          const pickup_date = sdEl && sdEl.value || '';
+          const start_time = stEl && (stEl.value || '15:00') || '15:00';
+          
+          if (!location || !pickup_date) {
+            if (fetchAllStatus) fetchAllStatus.textContent = '⚠️ Preencha local e data primeiro';
+            return;
+          }
+          
+          const daysList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60];
+          
+          try {
+            fetchAllDaysBtn.disabled = true;
+            fetchAllDaysBtn.textContent = '⏳ Loading...';
+            if (fetchAllStatus) {
+              fetchAllStatus.textContent = 'Loading 0/' + daysList.length;
+              fetchAllStatus.className = 'text-xs font-medium';
+              fetchAllStatus.style.color = '#009cb6';
+            }
+            
+            let completed = 0;
+            
+            for (const days of daysList) {
+              try {
+                // CORRECTED: pickup_date is already the start date from the form
+                const body = { location, start_date: pickup_date, start_time, days, lang: 'pt', currency: 'EUR' };
+                console.log(`[FETCH ALL] ${days}d - Enviando request...`);
+                
+                const resp = await fetch('/api/track-by-params', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'same-origin',
+                  cache: 'no-store',
+                  body: JSON.stringify(body)
+                });
+                
+                if (resp.status === 401) {
+                  throw new Error('Não autorizado - faça login novamente');
+                }
+                
+                const data = await resp.json();
+                
+                if (data && data.ok !== false) {
+                  const cacheKey = getCacheKey(location, pickup_date, days);
+                  cachedResults[cacheKey] = data;
+                  console.log(`[FETCH ALL] ${days}d - Cache salvo (${data.items?.length || 0} items)`);
+                }
+                
+                completed++;
+                if (fetchAllStatus) {
+                  fetchAllStatus.innerHTML = `<span style="background: #f4ad0f; color: white; padding: 2px 4px; border-radius: 3px; font-weight: 700; margin-right: 4px;">✓</span> ${completed}/${daysList.length} períodos carregados`;
+                  fetchAllStatus.style.color = '#009cb6';
+                }
+              } catch (err) {
+                console.error(`❌ Erro ao carregar ${days}d:`, err);
+                completed++;
+                if (fetchAllStatus) {
+                  fetchAllStatus.textContent = `⚠️ ${completed}/${daysList.length} (erro em ${days}d)`;
+                  fetchAllStatus.className = 'text-xs font-medium';
+                  fetchAllStatus.style.color = '#f4ad0f';
+                }
+              }
+            }
+            
+            if (fetchAllStatus) {
+              fetchAllStatus.innerHTML = `<span style="background: #f4ad0f; color: white; padding: 2px 4px; border-radius: 3px; font-weight: 700; margin-right: 4px;">✓</span> ${completed}/${daysList.length} períodos prontos!`;
+              fetchAllStatus.className = 'text-xs font-medium';
+              fetchAllStatus.style.color = '#009cb6';
+            }
+            
+            // Atualizar chips para mostrar checkmarks
+            try {
+              const daysInput = document.getElementById('days');
+              if (daysInput) {
+                const onChange = (d) => {
+                  window.selectedDays = d;
+                  daysInput.value = String(d);
+                  daysInput.dispatchEvent(new Event('input', { bubbles: true }));
+                  renderChips('daysChips', daysList, onChange);
+                };
+                renderChips('daysChips', daysList, onChange);
+              }
+            } catch(_) {}
+            
+            // Limpar status após 5s
+            setTimeout(() => {
+              if (fetchAllStatus) {
+                fetchAllStatus.textContent = '';
+                fetchAllStatus.className = 'text-xs text-gray-500';
+              }
+            }, 5000);
+            
+          } catch (err) {
+            if (fetchAllStatus) {
+              fetchAllStatus.textContent = '❌ Erro: ' + err.message;
+              fetchAllStatus.className = 'text-xs font-medium';
+              fetchAllStatus.style.color = '#f4ad0f';
+            }
+          } finally {
+            fetchAllDaysBtn.disabled = false;
+            fetchAllDaysBtn.textContent = '📊 Fetch All Days';
+          }
+        });
+        fetchAllDaysBtn._bound = true;
+      }
+
+      // Warmup to reduce first-click issues (ensures session/cookies)
+      try { fetch('/healthz', { credentials: 'same-origin', cache: 'no-store', keepalive: true }).catch(()=>{}); } catch(_){ }
+
+      function renderBulkResults(results, resA, resF, statusA, statusF) {
+        for (const block of results) {
+          const container = block.location.toLowerCase().includes('albufeira') ? resA : resF;
+          const status = block.location.toLowerCase().includes('albufeira') ? statusA : statusF;
+          status.textContent = '';
+          for (const d of block.durations) {
+            const section = document.createElement('div');
+            section.className = 'rounded-md border';
+            const header = document.createElement('div');
+            header.className = 'px-4 py-2 bg-gray-50 text-sm font-medium';
+            header.textContent = `${d.days} day(s)`;
+            const wrapper = document.createElement('div');
+            // Desktop table structure
+            const tableWrap = document.createElement('div');
+            tableWrap.className = 'hidden md:block overflow-x-auto';
+            const table = document.createElement('table');
+            table.className = 'min-w-full divide-y divide-gray-200';
+            table.innerHTML = `
+              <thead class="bg-[#009cb6]">
+                <tr>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-white uppercase">#</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-white uppercase">Supplier</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-white uppercase">Car</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-white uppercase">Total Price</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 bg-white"></tbody>`;
+            const tbody = table.querySelector('tbody');
+            tableWrap.appendChild(table);
+
+            // Mobile cards container
+            const cardsWrap = document.createElement('div');
+            cardsWrap.className = 'block md:hidden';
+
+            wrapper.appendChild(tableWrap);
+            wrapper.appendChild(cardsWrap);
+            section.appendChild(header);
+            section.appendChild(wrapper);
+            container.appendChild(section);
+
+            // Incremental append in chunks
+            const items = Array.isArray(d.items) ? d.items : [];
+            const chunkSize = 40;
+            let i = 0;
+            function appendChunk(){
+              const end = Math.min(i + chunkSize, items.length);
+              for (; i < end; i++){
+                const it = items[i];
+                const tr = document.createElement('tr');
+                if (/auto prudente/i.test(it.supplier||'')) tr.style.backgroundColor = 'var(--brand-teal-20)';
+                tr.innerHTML = `
+                  <td class="px-4 py-2 text-sm text-gray-600">${i + 1}</td>
+                  <td class="px-4 py-2 text-sm">${escapeHtml(it.supplier || '')}</td>
+                  <td class="px-4 py-2 text-sm">${escapeHtml(it.car || '')}</td>
+                  <td class="px-4 py-2 text-sm font-medium">${escapeHtml(it.price || '')}</td>`;
+                tbody.appendChild(tr);
+              }
+              // Update mobile cards lazily too
+              if (end > 0){
+                const slice = items.slice(Math.max(0, end - chunkSize), end);
+                const grid = document.createElement('div');
+                grid.innerHTML = renderCardsForItems(slice);
+                cardsWrap.appendChild(grid);
+              }
+              if (i < items.length){
+                requestAnimationFrame(() => setTimeout(appendChunk, 0));
+              }
+            }
+            appendChunk();
+          }
+        }
+      }
+
+      function splitLines(v) {
+        return (v || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      }
+
+      function escapeHtml(str) {
+        return String(str).replace(/[&<>\"]+/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[s]));
+      }
+
+      // ===== SUPPLIER FILTERS =====
+      // Mapa de códigos/nomes para logos locais (60 logos do CarJet)
+      const supplierLogoMap = {
+        // A
+        'ABB': '/static/logos/logo_ABB.png.avif',
+        'ABB1': '/static/logos/logo_ABB.png.avif',  // Mesmo logo que ABB
+        'Abbycar': '/static/logos/logo_ABB.png.avif',
+        'Abbycar Não reembolsável': '/static/logos/logo_ABB.png.avif',
+        'ACE': '/static/logos/logo_ACE.png',
+        'Ace Rent a Car': '/static/logos/logo_ACE.png',
+        'AIR': '/static/logos/logo_AIR.png',
+        'ALM': '/static/logos/logo_ALM.png.avif',
+        'Alamo': '/static/logos/logo_ALM.png.avif',
+        'AMI': '/static/logos/logo_AMI.png',
+        'AMI1': '/static/logos/logo_AMI.png',  // Mesmo logo que AMI
+        'Amigoautos': '/static/logos/logo_AMI.png',
+        'Amigoautos Não reembolsável': '/static/logos/logo_AMI.png',
+        'ATR': '/static/logos/logo_ATR.png',
+        'Autorent': '/static/logos/logo_ATR.png',
+        'Auto Rent': '/static/logos/logo_ATR.png',
+        'AUP': '/static/logos/logo_AUP.png',
+        'Auto Prudente': '/static/logos/logo_AUP.png',
+        'AUU': '/static/logos/logo_AUU.png',
+        'Auto Union': '/static/logos/logo_AUU.png',
+        'AVX': '/static/logos/logo_AVX.png',
+        'Avis': '/static/logos/logo_AVX.png',
+        // B
+        'BGX': '/static/logos/logo_BGX.png.avif',
+        'Budget': '/static/logos/logo_BGX.png.avif',
+        'BSD': '/static/logos/logo_BSD.png',
+        'Best Deal': '/static/logos/logo_BSD.png',
+        'Booking.com': '/static/logos/logo_BSD.png',
+        // C
+        'CAE': '/static/logos/logo_CAE.png',
+        'CarRentals': '/static/logos/logo_CAE.png',
+        'CAL': '/static/logos/logo_CAE.png',
+        'Caleche': '/static/logos/logo_CAE.png',
+        'CAR': '/static/logos/logo_CAR.png',
+        'Carnect': '/static/logos/logo_CAR.png',
+        'Car Nect': '/static/logos/logo_CAR.png',
+        'Car-Nect': '/static/logos/logo_CAR.png',
+        'CEN': '/static/logos/logo_CEN.png.avif',
+        'Centauro': '/static/logos/logo_CEN.png.avif',
+        'CLA': '/static/logos/logo_CLA.png',
+        'Caldera': '/static/logos/logo_CLA.png',
+        'CLA': 'Caldera Rent a Car',
+        // D
+        'D4F': '/static/logos/logo_D4F.png.avif',
+        'Drive4fun': '/static/logos/logo_D4F.png.avif',
+        'DOH': '/static/logos/logo_DOY.png',
+        'DOY': '/static/logos/logo_DOY.png',
+        'Drive on Holidays': '/static/logos/logo_DOY.png',
+        'DTG': '/static/logos/logo_DTG.png',
+        'DTG1': '/static/logos/logo_DTG1.png',
+        'Dollar': '/static/logos/logo_DTG.png',
+        'DVM': '/static/logos/logo_DVM.png',
+        'Drive4move': '/static/logos/logo_DVM.png',
+        'Drive 4 Move': '/static/logos/logo_DVM.png',
+        // E
+        'ECR': '/static/logos/logo_ECR.png.avif',
+        'Europcar': '/static/logos/logo_ECR.png.avif',
+        'ENT': '/static/logos/logo_ENT.png',
+        'Enterprise': '/static/logos/logo_ENT.png',
+        'EPI': '/static/logos/logo_EPI.png',
+        'EU2': '/static/logos/logo_EUR.png',  // Mesmo logo que EUR
+        'EUK': '/static/logos/logo_EUK.png',
+        'EUR': '/static/logos/logo_EUR.png',
+        'Goldcar': '/static/logos/logo_EUR.png',
+        'Goldcar Não reembolsável': '/static/logos/logo_EUR.png',
+        'Goldcar Keyn Go': '/static/logos/logo_EUK.png',
+        // F
+        'FFX': '/static/logos/logo_FFX.png',
+        'Firefly': '/static/logos/logo_FFX.png',
+        'FLC': '/static/logos/logo_FLZ.png.avif',
+        'FLZ': '/static/logos/logo_FLZ.png.avif',
+        'Flizzr': '/static/logos/logo_FLZ.png.avif',
+        'Flizzr by Sixt': '/static/logos/logo_FLZ.png.avif',
+        // G
+        'GOS': 'Go2',
+        'GO2': 'Go2',
+        'GMO': '/static/logos/logo_GMO.png',
+        'GMO1': '/static/logos/logo_GMO.png',  // Mesmo logo que GMO
+        'Green Motion': '/static/logos/logo_GMO.png',
+        'Green Motion Não reembolsável': '/static/logos/logo_GMO.png',
+        'GRE': '/static/logos/logo_GMO.png',
+        'GRM': '/static/logos/logo_GMO.png',
+        'GUE': '/static/logos/logo_GUE.png',
+        'Guerin': '/static/logos/logo_GUE.png',
+        // H
+        'HER': '/static/logos/logo_HER.png',
+        'Hertz': '/static/logos/logo_HER.png',
+        // I
+        'ICT': '/static/logos/logo_ICT.png',
+        'Interrent': '/static/logos/logo_ICT.png',
+        'InterRent': '/static/logos/logo_ICT.png',
+        // K
+        'KED': '/static/logos/logo_KED.png.avif',
+        'Keddy': '/static/logos/logo_KED.png.avif',
+        'KLA': '/static/logos/logo_KLA.png',
+        'Klass Wagen': '/static/logos/logo_KLA.png',
+        // L
+        'LCR': '/static/logos/logo_LCR.png',
+        'Localcar': '/static/logos/logo_LCR.png',
+        'LOC': '/static/logos/logo_LOC.png',
+        'Locauto': '/static/logos/logo_LOC.png',
+        'LOZ': '/static/logos/logo_MIL.png?v=2',
+        'Localiza': '/static/logos/logo_MIL.png?v=2',
+        'Millioncarhire': '/static/logos/logo_MIL.png?v=2',
+        'Million Car Hire': '/static/logos/logo_MIL.png?v=2',
+        // M
+        'MVY': '/static/logos/logo_MVY.png',
+        'Movyng': '/static/logos/logo_MVY.png',
+        'Mouvng': '/static/logos/logo_MVY.png',
+        // N
+        'NAT': '/static/logos/logo_NAT.png',
+        'National': '/static/logos/logo_NAT.png',
+        // O
+        'OKR': '/static/logos/logo_OKR.png',
+        'OKR1': '/static/logos/logo_OKR.png',  // Mesmo logo que OKR
+        'OK Mobility': '/static/logos/logo_OKR.png',
+        'OK Mobility Não reembolsável': '/static/logos/logo_OKR.png',
+        'OK Rent a Car': '/static/logos/logo_OKR.png',
+        // P
+        'PAR': '/static/logos/logo_PAR.png',
+        'Paa': '/static/logos/logo_PAR.png',
+        // R
+        'REC': '/static/logos/logo_REC.png',
+        'Record Go': '/static/logos/logo_REC.png',
+        'RNA': '/static/logos/logo_RNA.png',
+        'Rentauto': '/static/logos/logo_RNA.png',
+        'Rentacar': '/static/logos/logo_RNA.png',
+        // S
+        'SAD': '/static/logos/logo_SAD.png',
+        'Drivalia': '/static/logos/logo_SAD.png',
+        'SEV': '/static/logos/logo_SEV.png',
+        'Sevenseas': '/static/logos/logo_SEV.png',
+        'SUR': '/static/logos/logo_SUR.png',
+        'Surprice': '/static/logos/logo_SUR.png',
+        'SVN': '/static/logos/logo_SVN.png',
+        'Sevens': '/static/logos/logo_SVN.png',
+        'Sixt': '/static/logos/logo_SXT.png',
+        'SXT': '/static/logos/logo_SXT.png',
+        // T
+        'TAN': '/static/logos/logo_TAN.png',
+        'TAN1': '/static/logos/logo_TAN1.png',
+        'Rent a Car': '/static/logos/logo_TAN1.png',
+        'Tangerine': '/static/logos/logo_TAN.png',
+        'TAX': '/static/logos/logo_TAX.png',
+        'Tax': '/static/logos/logo_TAX.png',
+        'THR': '/static/logos/logo_THR.png.avif',
+        'Thrifty': '/static/logos/logo_THR.png.avif',
+        // W
+        'WIN': '/static/logos/logo_WIN.png',
+        'Winrent': '/static/logos/logo_WIN.png',
+        'Win Rent': '/static/logos/logo_WIN.png',
+        // Y
+        'YES': '/static/logos/logo_YES.png?v=2',
+        'Yescar': '/static/logos/logo_YES.png?v=2',
+        'YesNo': '/static/logos/logo_YNOT.png?v=2',
+        'Ynot': '/static/logos/logo_YNO.png.avif?v=2',
+        'YNO': '/static/logos/logo_YNO.png.avif?v=2',
+        'YNOT': '/static/logos/logo_YNOT.png?v=2',
+        'YNO Rent a Car': '/static/logos/logo_YNO.png.avif?v=2'
+      };
+
+      let selectedSuppliers = new Set();
+      let currentSuppliers = []; // Suppliers extraídos dos resultados
+
+      function getSupplierLogo(supplierName) {
+        // Tentar match direto
+        if (supplierLogoMap[supplierName]) {
+          const logo = supplierLogoMap[supplierName];
+          console.log(`[LOGO] "${supplierName}" → ${logo}`);
+          return logo;
+        }
+        
+        // Tentar match parcial (case insensitive)
+        const nameLower = supplierName.toLowerCase();
+        for (const [key, logo] of Object.entries(supplierLogoMap)) {
+          if (key.toLowerCase() === nameLower || nameLower.includes(key.toLowerCase())) {
+            console.log(`[LOGO PARTIAL] "${supplierName}" → ${logo} (matched "${key}")`);
+            return logo;
+          }
+        }
+        
+        // Fallback: sem logo
+        console.warn(`[LOGO NOT FOUND] "${supplierName}"`);
+        return null;
+      }
+
+      function extractSuppliersFromItems(items) {
+        const suppliersSet = new Set();
+        console.log('[EXTRACT SUPPLIERS] Total items:', items?.length || 0);
+        (items || []).forEach((item, idx) => {
+          const rawSupplier = item.supplier || '';
+          const supplier = displaySupplierName(rawSupplier);
+          if (supplier) {
+            suppliersSet.add(supplier);
+            if (idx < 5) {
+              console.log(`[SUPPLIER ${idx}] Raw: "${rawSupplier}" → Display: "${supplier}"`);
+            }
+          }
+        });
+        const sorted = Array.from(suppliersSet).sort((a, b) => a.localeCompare(b, 'pt-PT'));
+        console.log('[EXTRACT SUPPLIERS] Únicos encontrados:', sorted.length, sorted);
+        return sorted;
+      }
+
+      function initSupplierFilters(items) {
+        const container = document.getElementById('suppliersFilter');
+        if (!container) return;
+        
+        // Limpar filtros existentes
+        container.innerHTML = '';
+        selectedSuppliers.clear();
+        
+        // Extrair suppliers únicos dos resultados e ORDENAR ALFABETICAMENTE
+        currentSuppliers = extractSuppliersFromItems(items);
+        currentSuppliers.sort((a, b) => a.localeCompare(b, 'pt-PT'));
+        
+        // Filtrar suppliers que não queremos na sidebar (mas mantemos nos resultados)
+        const excludedFromSidebar = ['Carnect', 'Car Nect', 'Car-Nect', 'Ada', 'Ada Rent a Car', 'Ada Car Rental'];
+        const filteredSuppliers = currentSuppliers.filter(s => !excludedFromSidebar.includes(s));
+        
+        console.log('[SUPPLIERS] Encontrados (ordenados):', currentSuppliers.length, currentSuppliers);
+        console.log('[SUPPLIERS] Excluídos da sidebar:', currentSuppliers.length - filteredSuppliers.length);
+        
+        if (filteredSuppliers.length === 0) {
+          container.innerHTML = '<p class="text-xs text-gray-500 p-2 col-span-3">No supplier found</p>';
+          return;
+        }
+        
+        filteredSuppliers.forEach((supplierName, idx) => {
+          const div = document.createElement('div');
+          div.className = 'supplier-checkbox';
+          div.dataset.supplier = supplierName;
+          
+          const logoUrl = getSupplierLogo(supplierName);
+          
+          if (idx < 5) {
+            console.log(`[INIT FILTER ${idx}] Supplier: "${supplierName}" → Logo: ${logoUrl ? logoUrl : 'SEM LOGO'}`);
+          }
+          
+          if (logoUrl) {
+            const logo = document.createElement('img');
+            logo.src = logoUrl;
+            logo.alt = supplierName;
+            logo.className = 'supplier-logo';
+            logo.onload = () => {
+              if (idx < 5) console.log(`[LOGO OK] ${supplierName}: ${logoUrl}`);
+            };
+            logo.onerror = () => {
+              console.warn('[LOGO ERRO] Falhou ao carregar:', logoUrl, 'para', supplierName);
+              logo.style.display = 'none';
+            };
+            div.appendChild(logo);
+          } else {
+            console.warn('[SEM LOGO]', supplierName, '- não encontrado no mapa');
+          }
+          
+          // Verificar se é não reembolsável e adicionar asterisco
+          const isTAN1Sidebar = supplierName === 'Rent a Car' || /TAN1/i.test(supplierName);
+          const isNonRefundable = isTAN1Sidebar || /não\s*reembols[aá]vel|non[- ]?refundable|\bNR\b/i.test(supplierName);
+          
+          // Adicionar tooltip com nome (sem mostrar texto)
+          div.title = supplierName;
+          
+          // Adicionar asterisco se não reembolsável
+          if (isNonRefundable) {
+            const asterisk = document.createElement('span');
+            asterisk.style.cssText = 'color:#ff0000; font-weight:bold; font-size:14px; position:absolute; top:2px; right:2px;';
+            asterisk.textContent = '*';
+            asterisk.title = 'Não reembolsável';
+            div.style.position = 'relative';
+            div.appendChild(asterisk);
+          }
+          
+          // Click handler para selecionar APENAS este supplier
+          div.addEventListener('click', () => {
+            const allCards = document.querySelectorAll('#suppliersFilter .supplier-checkbox');
+            
+            // Se este já é o único selecionado, selecionar todos
+            if (selectedSuppliers.size === 1 && selectedSuppliers.has(supplierName)) {
+              // Selecionar todos
+              selectedSuppliers.clear();
+              allCards.forEach(card => {
+                const name = card.dataset.supplier;
+                selectedSuppliers.add(name);
+                card.classList.remove('unselected');
+              });
+            } else {
+              // Desselecionar todos e selecionar só este
+              selectedSuppliers.clear();
+              allCards.forEach(card => card.classList.add('unselected'));
+              
+              selectedSuppliers.add(supplierName);
+              div.classList.remove('unselected');
+            }
+            
+            filterBySuppliers();
+          });
+          
+          container.appendChild(div);
+          selectedSuppliers.add(supplierName);
+        });
+        
+        console.log('[SUPPLIERS] Filtros criados:', currentSuppliers.length);
+      }
+
+      function toggleAllSuppliers() {
+        const supplierCards = document.querySelectorAll('#suppliersFilter .supplier-checkbox');
+        const allSelected = Array.from(supplierCards).every(card => !card.classList.contains('unselected'));
+        
+        supplierCards.forEach(card => {
+          const supplierName = card.dataset.supplier;
+          if (allSelected) {
+            // Desselecionar todos
+            card.classList.add('unselected');
+            selectedSuppliers.delete(supplierName);
+          } else {
+            // Selecionar todos
+            card.classList.remove('unselected');
+            selectedSuppliers.add(supplierName);
+          }
+        });
+        
+        filterBySuppliers();
+      }
+
+      function filterBySuppliers() {
+        // Re-render results with filter
+        const resultsContainer = document.getElementById('results');
+        if (resultsContainer && resultsContainer.innerHTML) {
+          // Trigger re-render of current results
+          applySupplierFilter();
+        }
+      }
+
+      function applySupplierFilter() {
+        // Filter vehicles by selected suppliers
+        const cards = document.querySelectorAll('[data-supplier]');
+        cards.forEach(card => {
+          const supplier = card.getAttribute('data-supplier');
+          if (selectedSuppliers.size === 0 || selectedSuppliers.has(supplier)) {
+            card.style.display = '';
+          } else {
+            card.style.display = 'none';
+          }
+        });
+        
+        // Atualizar contadores dos grupos
+        updateGroupCounts();
+      }
+
+      function updateGroupCounts() {
+        // Count total visible vehicles
+        let totalVisible = 0;
+        
+        // Atualizar contadores dos grupos e contar total
+        const groupTitles = document.querySelectorAll('.group-title');
+        groupTitles.forEach(title => {
+          // Encontrar o conteúdo do grupo (próximo elemento)
+          const groupContent = title.nextElementSibling;
+          if (!groupContent) return;
+          
+          // Count visible vehicles in this group
+          const visibleCards = groupContent.querySelectorAll('[data-supplier]:not([style*="display: none"])');
+          const visibleCount = visibleCards.length;
+          totalVisible += visibleCount;
+          
+          // Atualizar contador no título do grupo
+          const titleSpan = title.querySelector('span:first-child');
+          if (titleSpan) {
+            // Remover contador antigo
+            const oldCounter = titleSpan.querySelector('.opacity-80');
+            if (oldCounter) oldCounter.remove();
+            
+            // Adicionar novo contador
+            const counterSpan = document.createElement('span');
+            counterSpan.className = 'ml-2 opacity-80';
+            counterSpan.textContent = `(${visibleCount} ${visibleCount === 1 ? 'vehicle' : 'vehicles'})`;
+            titleSpan.appendChild(counterSpan);
+          }
+          
+          // Hide group if no visible vehicles
+          if (visibleCount === 0) {
+            title.style.display = 'none';
+            groupContent.style.display = 'none';
+          } else {
+            title.style.display = '';
+            groupContent.style.display = '';
+          }
+        });
+        
+        // Atualizar contador total no cabeçalho
+        const headerCounters = document.querySelectorAll('.px-4.py-2.bg-gray-50 .text-green-600');
+        headerCounters.forEach(counter => {
+          counter.textContent = `(${totalVisible} ${totalVisible === 1 ? 'vehicle' : 'vehicles'})`;
+        });
+        
+        console.log('[UPDATE COUNTS] Total visível:', totalVisible);
+      }
+
+      function showSupplierFilters(items) {
+        const sidebar = document.getElementById('suppliersSidebar');
+        const mainContent = document.getElementById('mainContent');
+        
+        if (sidebar && mainContent) {
+          sidebar.style.display = '';
+          mainContent.classList.remove('lg:col-span-12');
+          mainContent.classList.add('lg:col-span-9');
+          
+          // Inicializar filtros com os items dos resultados
+          if (items && items.length > 0) {
+            initSupplierFilters(items);
+          }
+        }
+      }
+
+      function hideSupplierFilters() {
+        const sidebar = document.getElementById('suppliersSidebar');
+        const mainContent = document.getElementById('mainContent');
+        
+        if (sidebar && mainContent) {
+          sidebar.style.display = 'none';
+          mainContent.classList.remove('lg:col-span-9');
+          mainContent.classList.add('lg:col-span-12');
+        }
+      }
+    </script>
+  </body>
+</html>

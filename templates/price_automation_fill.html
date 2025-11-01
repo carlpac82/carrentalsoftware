@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Preencher Preços CarJet - Auto Prudente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'Outfit', sans-serif; }
+        .price-cell { min-width: 80px; }
+        .price-cell input { text-align: right; }
+        .grupo-row:hover { background-color: #f0f9ff; }
+    </style>
+</head>
+<body class="bg-gray-50">
+    <header class="bg-[#009cb6] border-b">
+        <div class="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="/" class="inline-flex items-center">
+                    <img src="/static/ap-heather.png" alt="Auto Prudente" class="h-12 w-auto" />
+                </a>
+                <h1 class="text-white text-lg font-semibold">Preencher Preços CarJet</h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="/price-automation" class="p-2 text-white/90 hover:text-white hover:bg-white/10 transition-all" title="Voltar">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+                    </svg>
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <main class="mx-auto max-w-7xl px-4 py-6">
+        <!-- Controles -->
+        <div class="bg-white shadow mb-6 p-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Localização</label>
+                        <select id="location" class="px-3 py-2 border border-gray-300">
+                            <option value="Aeroporto de Faro">Aeroporto de Faro</option>
+                            <option value="Albufeira" selected>Albufeira</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Data</label>
+                        <input type="date" id="pickupDate" class="px-3 py-2 border border-gray-300">
+                    </div>
+                    <div class="flex items-end">
+                        <button onclick="searchAllPrices()" class="px-6 py-2 bg-[#009cb6] text-white hover:bg-[#f4ad0f] transition-colors">
+                            🔍 Search All Prices
+                        </button>
+                    </div>
+                </div>
+                <div class="flex items-center gap-3">
+                    <button onclick="exportToExcel()" class="px-6 py-2 bg-green-600 text-white hover:bg-green-700 transition-colors">
+                        📅 Export Excel
+                    </button>
+                    <button onclick="saveToDatabase()" class="px-6 py-2 bg-[#009cb6] text-white hover:bg-[#f4ad0f] transition-colors">
+                        💾 Save
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progresso -->
+        <div id="progressBar" class="bg-white shadow mb-6 p-4 hidden">
+            <div class="flex items-center gap-3">
+                <svg class="w-5 h-5 animate-spin text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                </svg>
+                <div class="flex-1">
+                    <div class="flex justify-between text-sm mb-1">
+                        <span id="progressText">A pesquisar...</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 h-2">
+                        <div id="progressFill" class="bg-[#009cb6] h-2 transition-all" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabela de Preços -->
+        <div class="bg-white shadow overflow-x-auto">
+            <table class="w-full text-sm">
+                <thead class="bg-gray-50 sticky top-0">
+                    <tr>
+                        <th class="px-4 py-3 text-left font-semibold">Group</th>
+                        <th class="px-4 py-3 text-center font-semibold">1d</th>
+                        <th class="px-4 py-3 text-center font-semibold">2d</th>
+                        <th class="px-4 py-3 text-center font-semibold">3d</th>
+                        <th class="px-4 py-3 text-center font-semibold">4d</th>
+                        <th class="px-4 py-3 text-center font-semibold">5d</th>
+                        <th class="px-4 py-3 text-center font-semibold">6d</th>
+                        <th class="px-4 py-3 text-center font-semibold">7d</th>
+                        <th class="px-4 py-3 text-center font-semibold">8d</th>
+                        <th class="px-4 py-3 text-center font-semibold">9d</th>
+                        <th class="px-4 py-3 text-center font-semibold">14d</th>
+                        <th class="px-4 py-3 text-center font-semibold">22d</th>
+                        <th class="px-4 py-3 text-center font-semibold">28d</th>
+                        <th class="px-4 py-3 text-center font-semibold">31d</th>
+                    </tr>
+                </thead>
+                <tbody id="pricesTable">
+                    <!-- Grupos: B1, B2, C, D, E1, E2, F, G, J1, J2, L1, L2, M1, M2, N -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Legenda -->
+        <div class="mt-4 flex items-center gap-6 text-sm">
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-green-100 border border-green-300"></div>
+                <span>Price found automatically</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-yellow-100 border border-yellow-300"></div>
+                <span>Price inserted manually</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-4 h-4 bg-white border border-gray-300"></div>
+                <span>No price (click to insert)</span>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const grupos = ['B1', 'B2', 'C', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N'];
+        const dias = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31];
+        let pricesData = {};
+
+        // Inicializar tabela
+        function initTable() {
+            const tbody = document.getElementById('pricesTable');
+            tbody.innerHTML = '';
+
+            grupos.forEach(grupo => {
+                const tr = document.createElement('tr');
+                tr.className = 'grupo-row border-t';
+                
+                // Coluna do grupo
+                const tdGroup = document.createElement('td');
+                tdGroup.className = 'px-4 py-3 font-semibold';
+                tdGroup.textContent = grupo;
+                tr.appendChild(tdGroup);
+
+                // Colunas dos dias
+                dias.forEach(day => {
+                    const td = document.createElement('td');
+                    td.className = 'px-2 py-2 price-cell';
+                    
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.placeholder = '-';
+                    input.className = 'w-full px-2 py-1 border border-gray-300 text-sm focus:ring-2 focus:ring-[#009cb6] focus:border-transparent';
+                    input.dataset.grupo = grupo;
+                    input.dataset.dias = day;
+                    input.dataset.manual = 'false';
+                    
+                    // Forçar uso de ponto (.) em vez de vírgula (,)
+                    input.addEventListener('input', function() {
+                        // Substituir vírgula por ponto
+                        this.value = this.value.replace(',', '.');
+                        
+                        // Validar formato numérico
+                        const regex = /^\d*\.?\d{0,2}$/;
+                        if (!regex.test(this.value) && this.value !== '') {
+                            this.value = this.value.slice(0, -1);
+                        }
+                        
+                        if (this.value) {
+                            this.dataset.manual = 'true';
+                            this.parentElement.classList.add('bg-yellow-100');
+                            this.parentElement.classList.remove('bg-green-100');
+                        }
+                    });
+                    
+                    td.appendChild(input);
+                    tr.appendChild(td);
+                });
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        // Pesquisar todos os preços
+        async function searchAllPrices() {
+            const location = document.getElementById('location').value;
+            const pickupDate = document.getElementById('pickupDate').value;
+
+            if (!pickupDate) {
+                alert('⚠️ Selecione uma data primeiro');
+                return;
+            }
+
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            const progressPercent = document.getElementById('progressPercent');
+            const progressFill = document.getElementById('progressFill');
+
+            progressBar.classList.remove('hidden');
+
+            const total = dias.length;
+            let completed = 0;
+
+            for (const day of dias) {
+                progressText.textContent = `A pesquisar ${day} dias...`;
+                progressPercent.textContent = `${Math.round((completed / total) * 100)}%`;
+                progressFill.style.width = `${(completed / total) * 100}%`;
+
+                try {
+                    const response = await fetch('/api/track-by-params', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            location: location,
+                            start_date: pickupDate,
+                            start_time: '15:00',
+                            days: day,
+                            lang: 'pt',
+                            currency: 'EUR'
+                        })
+                    });
+
+                    const data = await response.json();
+                    
+                    if (data.items && data.items.length > 0) {
+                        // Agrupar preços por grupo
+                        data.items.forEach(item => {
+                            const grupo = item.group || extractGroup(item.car);
+                            if (grupos.includes(grupo)) {
+                                const input = document.querySelector(`input[data-grupo="${grupo}"][data-dias="${day}"]`);
+                                if (input && !input.value) {
+                                    // Garantir formato com ponto (.)
+                                    const preco = parseFloat(item.price_num || 0);
+                                    if (preco > 0) {
+                                        input.value = preco.toFixed(2);
+                                        input.dataset.manual = 'false';
+                                        input.parentElement.classList.add('bg-green-100');
+                                    }
+                                }
+                            }
+                        });
+                    }
+                } catch (err) {
+                    console.error(`Erro ao pesquisar ${day} dias:`, err);
+                }
+
+                completed++;
+            }
+
+            progressText.textContent = '✅ Pesquisa concluída!';
+            progressPercent.textContent = '100%';
+            progressFill.style.width = '100%';
+
+            setTimeout(() => {
+                progressBar.classList.add('hidden');
+            }, 2000);
+        }
+
+        function extractGroup(carName) {
+            // Extrair grupo do nome do carro
+            const match = carName.match(/Group\s+([A-Z]\d?)/i);
+            return match ? match[1] : '';
+        }
+
+        function exportToExcel() {
+            alert('🚧 Excel export feature under development');
+        }
+
+        function saveToDatabase() {
+            alert('🚧 Save feature under development');
+        }
+
+        // Definir data de hoje
+        document.getElementById('pickupDate').valueAsDate = new Date();
+
+        // Inicializar
+        initTable();
+    </script>
+</body>
+</html>

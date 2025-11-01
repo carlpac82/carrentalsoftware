@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Login - Rental Price Tracker</title>
+    <link rel="icon" type="image/png" href="/static/ap-favicon.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="min-h-screen bg-gray-50 flex items-center justify-center p-6">
+    <div class="w-full max-w-sm">
+      <div class="bg-white shadow rounded-lg p-6">
+        <div class="mb-4 flex items-center justify-center">
+          <img src="/static/ap-logo.png" alt="Carjet Rental Price Tracker" class="h-12 w-auto" />
+        </div>
+        <h1 class="text-xl font-semibold text-gray-800 mb-4 text-center">Carjet Rental Price Tracker</h1>
+        {% if error %}
+        <div class="mb-4 text-sm text-red-600">{{ error }}</div>
+        {% endif %}
+        <form method="post" action="/login" class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Username</label>
+            <input name="username" type="text" required class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-gray-900 focus:ring-gray-900" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium text-gray-700">Password</label>
+            <input name="password" type="password" required class="mt-1 w-full rounded-md border-gray-300 shadow-sm focus:border-gray-900 focus:ring-gray-900" />
+          </div>
+          <button class="w-full bg-[#009cb6] text-white rounded-md py-2 hover:bg-[#f6b511] transition-colors">Sign in</button>
+        </form>
+      </div>
+      <p class="text-center text-xs text-gray-500 mt-4">Protected access</p>
+    </div>
+  </body>
+</html>

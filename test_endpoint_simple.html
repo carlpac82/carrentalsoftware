@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Teste Simples - Vehicles API</title>
+</head>
+<body>
+    <h1>Teste Simples - /api/vehicles/with-originals</h1>
+    <button onclick="testar()">TESTAR AGORA</button>
+    <pre id="resultado"></pre>
+    
+    <script>
+        async function testar() {
+            const resultado = document.getElementById('resultado');
+            resultado.textContent = 'Testando...';
+            
+            try {
+                console.log('Fetching...');
+                const response = await fetch('/api/vehicles/with-originals');
+                console.log('Status:', response.status);
+                
+                const data = await response.json();
+                console.log('Data:', data);
+                
+                resultado.textContent = JSON.stringify(data, null, 2);
+                
+                if (data.ok) {
+                    alert(`✅ SUCESSO!\n\nTotal: ${data.total}\nVeículos: ${Object.keys(data.vehicles || {}).length}`);
+                } else {
+                    alert(`❌ ERRO!\n\n${data.error}`);
+                }
+            } catch (error) {
+                resultado.textContent = 'ERRO: ' + error.message;
+                alert('❌ ERRO: ' + error.message);
+            }
+        }
+        
+        // Testar automaticamente ao carregar
+        window.onload = () => {
+            setTimeout(testar, 500);
+        };
+    </script>
+</body>
+</html>

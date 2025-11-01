@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin • Price Validation</title>
+    <link rel="icon" type="image/png" href="/static/autoprudente-favicon.png?v=2" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      img[alt="Profile"], img[src*="profile"], .profile-picture {
+        border-radius: 50% !important;
+      }
+    </style>
+    <style>
+        :root {
+            --brand-yellow: #f4ad0f;
+            --brand-teal: #009cb6;
+        }
+        .rule-card {
+            border-left: 4px solid var(--brand-yellow);
+        }
+        .alert-badge {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+        }
+    </style>
+    <script>
+      if (window.location.search.includes("iframe=1")) {
+        document.addEventListener("DOMContentLoaded", function() {
+          const header = document.querySelector("header");
+          if (header) header.style.display = "none";
+        });
+      }
+    </script>
+</head>
+<body class="min-h-screen bg-gray-50">
+    <header class="bg-[#009cb6] border-b">
+        <div class="mx-auto max-w-4xl px-4 py-3 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                <a href="/"><img src="/static/ap-heather.png" alt="Car Rental Tracker" class="h-12 w-auto" /></a>
+            </div>
+            <nav class="flex items-center gap-3">
+                <a href="/" class="p-2 text-white/90 hover:text-white hover:bg-white/10 transition-all" title="Home"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></a>
+                <form method="post" action="/logout"><button type="submit" class="p-2 text-white/90 hover:text-white hover:bg-white/10 transition-all" title="Logout"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg></button></form>
+            </nav>
+        </div>
+    </header>
+    <main class="mx-auto max-w-4xl px-4 py-6">
+        <!-- Header with Admin Menu -->
+        <div class="flex items-center justify-between mb-4">
+            <h2 class="text-lg font-semibold">Price Validation</h2>
+        </div>
+
+        <!-- Tabs -->
+        <div class="bg-white rounded-lg shadow-md mb-6">
+            <div class="border-b border-gray-200">
+                <nav class="flex -mb-px">
+                    <button onclick="switchTab('rules')" id="tab-rules" class="tab-btn active px-6 py-3 border-b-2 border-[#f4ad0f] text-[#f4ad0f] font-medium">
+                        Group Rules
+                    </button>
+                    <button onclick="switchTab('alerts')" id="tab-alerts" class="tab-btn px-6 py-3 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium">
+                        Active Alerts
+                    </button>
+                    <button onclick="switchTab('history')" id="tab-history" class="tab-btn px-6 py-3 border-b-2 border-transparent text-gray-500 hover:text-gray-700 font-medium">
+                        History
+                    </button>
+                </nav>
+            </div>
+        </div>
+
+        <!-- Tab: Regras de Grupos -->
+        <div id="content-rules" class="tab-content">
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">➥ Add New Rule</h2>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Base Group</label>
+                        <select id="newRuleBaseGroup" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                            <option value="">Select...</option>
+                            <option value="B1">B1 - Mini 4 Portas</option>
+                            <option value="B2">B2 - Mini 5 Portas</option>
+                            <option value="D">D - Economy</option>
+                            <option value="E1">E1 - Mini Auto</option>
+                            <option value="E2">E2 - Economy Auto</option>
+                            <option value="F">F - SUV</option>
+                            <option value="G">G - Cabrio</option>
+                            <option value="X">X - Luxury</option>
+                            <option value="J1">J1 - Crossover</option>
+                            <option value="J2">J2 - Station Wagon</option>
+                            <option value="L1">L1 - SUV Auto</option>
+                            <option value="L2">L2 - Station Wagon Auto</option>
+                            <option value="M1">M1 - 7 Lugares</option>
+                            <option value="M2">M2 - 7 Lugares Auto</option>
+                            <option value="N">N - 9 Lugares</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Condition</label>
+                        <select id="newRuleCondition" class="w-full border border-gray-300 rounded-lg px-3 py-2">
+                            <option value="must_be_greater_than">Must be GREATER than</option>
+                            <option value="must_be_greater_or_equal">Must be GREATER OR EQUAL to</option>
+                            <option value="must_be_less_than">Must be LESS than</option>
+                            <option value="must_be_less_or_equal">Must be LESS OR EQUAL to</option>
+                            <option value="must_not_exceed_percentage">Cannot exceed % of</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Compare Groups (hold Ctrl/Cmd for multiple)</label>
+                        <select id="newRuleCompareGroup" multiple class="w-full border border-gray-300 rounded-lg px-3 py-2 h-32">
+                            <option value="B1">B1 - Mini 4 Portas</option>
+                            <option value="B2">B2 - Mini 5 Portas</option>
+                            <option value="D">D - Economy</option>
+                            <option value="E1">E1 - Mini Auto</option>
+                            <option value="E2">E2 - Economy Auto</option>
+                            <option value="F">F - SUV</option>
+                            <option value="G">G - Cabrio</option>
+                            <option value="X">X - Luxury</option>
+                            <option value="J1">J1 - Crossover</option>
+                            <option value="J2">J2 - Station Wagon</option>
+                            <option value="L1">L1 - SUV Auto</option>
+                            <option value="L2">L2 - Station Wagon Auto</option>
+                            <option value="M1">M1 - 7 Lugares</option>
+                            <option value="M2">M2 - 7 Lugares Auto</option>
+                            <option value="N">N - 9 Lugares</option>
+                        </select>
+                        <p class="text-xs text-gray-500 mt-1">Select multiple groups to compare against all of them</p>
+                    </div>
+                </div>
+                <div class="mb-4" id="percentageInput" style="display: none;">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Percentagem (%)</label>
+                    <input type="number" id="newRulePercentage" class="w-full md:w-1/3 border border-gray-300 rounded-lg px-3 py-2" placeholder="Ex: 10" min="0" max="100">
+                </div>
+                <button onclick="addRule()" class="bg-yellow-500 hover:bg-yellow-600 text-white px-6 py-2 rounded-lg font-medium">
+                    ➕ Adicionar Regra
+                </button>
+            </div>
+
+            <!-- Lista de Regras -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Regras Configuradas</h2>
+                <div id="rulesList" class="space-y-4">
+                    <!-- Regras serão inseridas aqui via JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Alertas Ativos -->
+        <div id="content-alerts" class="tab-content hidden">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Alertas Ativos</h2>
+                <div id="alertsList" class="space-y-4">
+                    <p class="text-gray-500 text-center py-8">Nenhum alerta ativo no momento</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: Histórico -->
+        <div id="content-history" class="tab-content hidden">
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h2 class="text-xl font-bold text-gray-800 mb-4">Histórico de Alertas</h2>
+                <div id="historyList" class="space-y-4">
+                    <p class="text-gray-500 text-center py-8">Nenhum histórico disponível</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Estado global
+        let rules = [];
+        let alerts = [];
+
+        // Carregar regras do localStorage
+        function loadRules() {
+            const saved = localStorage.getItem('priceValidationRules');
+            if (saved) {
+                rules = JSON.parse(saved);
+            } else {
+                // Regras padrão de exemplo
+                rules = [
+                    {
+                        id: Date.now(),
+                        baseGroup: 'B2',
+                        condition: 'must_be_greater_than',
+                        compareGroup: 'B1',
+                        percentage: null,
+                        enabled: true,
+                        description: 'B2 (Mini 5 Portas) deve ser MAIOR que B1 (Mini 4 Portas)'
+                    }
+                ];
+                saveRules();
+            }
+            renderRules();
+        }
+
+        // Salvar regras no localStorage
+        function saveRules() {
+            localStorage.setItem('priceValidationRules', JSON.stringify(rules));
+        }
+
+        // Adicionar nova regra
+        function addRule() {
+            const baseGroup = document.getElementById('newRuleBaseGroup').value;
+            const condition = document.getElementById('newRuleCondition').value;
+            const compareSelect = document.getElementById('newRuleCompareGroup');
+            const compareGroups = Array.from(compareSelect.selectedOptions).map(opt => opt.value);
+            const percentage = document.getElementById('newRulePercentage').value;
+
+            if (!baseGroup || compareGroups.length === 0) {
+                alert('Please select base group and at least one compare group!');
+                return;
+            }
+
+            if (compareGroups.includes(baseGroup)) {
+                alert('Base group cannot be in compare groups!');
+                return;
+            }
+
+            const conditionTexts = {
+                'must_be_greater_than': 'must be GREATER than',
+                'must_be_greater_or_equal': 'must be GREATER OR EQUAL to',
+                'must_be_less_than': 'must be LESS than',
+                'must_be_less_or_equal': 'must be LESS OR EQUAL to',
+                'must_not_exceed_percentage': 'cannot exceed'
+            };
+
+            const compareGroupsText = compareGroups.join(', ');
+            let description = `${baseGroup} ${conditionTexts[condition]} ${compareGroupsText}`;
+            if (condition === 'must_not_exceed_percentage' && percentage) {
+                description += ` by ${percentage}%`;
+            }
+
+            const rule = {
+                id: Date.now(),
+                baseGroup,
+                condition,
+                compareGroups,  // Array de grupos
+                percentage: percentage || null,
+                enabled: true,
+                description
+            };
+
+            rules.push(rule);
+            saveRules();
+            renderRules();
+
+            // Limpar formulário
+            document.getElementById('newRuleBaseGroup').value = '';
+            document.getElementById('newRuleCondition').value = 'must_be_greater_than';
+            compareSelect.selectedIndex = -1; // Limpar seleção múltipla
+            document.getElementById('newRulePercentage').value = '';
+            document.getElementById('percentageInput').style.display = 'none';
+        }
+
+        // Remover regra
+        function deleteRule(id) {
+            if (confirm('Tem certeza que deseja remover esta regra?')) {
+                rules = rules.filter(r => r.id !== id);
+                saveRules();
+                renderRules();
+            }
+        }
+
+        // Toggle regra ativa/inativa
+        function toggleRule(id) {
+            const rule = rules.find(r => r.id === id);
+            if (rule) {
+                rule.enabled = !rule.enabled;
+                saveRules();
+                renderRules();
+            }
+        }
+
+        // Renderizar lista de regras
+        function renderRules() {
+            const container = document.getElementById('rulesList');
+            if (rules.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center py-8">Nenhuma regra configurada</p>';
+                return;
+            }
+
+            container.innerHTML = rules.map(rule => `
+                <div class="rule-card bg-gray-50 rounded-lg p-4 ${rule.enabled ? '' : 'opacity-50'}">
+                    <div class="flex items-start justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-2">
+                                <span class="inline-flex items-center justify-center w-6 h-6 rounded-full ${rule.enabled ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-400'}"><svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/></svg></span>
+                                <h3 class="font-semibold text-gray-800">${rule.description}</h3>
+                            </div>
+                            <div class="text-sm text-gray-600">
+                                <span class="font-medium">Base:</span> ${rule.baseGroup} | 
+                                <span class="font-medium">Compare:</span> ${rule.compareGroups ? rule.compareGroups.join(', ') : rule.compareGroup}
+                                ${rule.percentage ? ` | <span class="font-medium">Limit:</span> ${rule.percentage}%` : ''}
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="toggleRule(${rule.id})" class="text-blue-600 hover:text-blue-800 px-3 py-1 rounded">
+                                ${rule.enabled ? '⏸️ Pausar' : '▶️ Ativar'}
+                            </button>
+                            <button onclick="deleteRule(${rule.id})" class="text-red-600 hover:text-red-800 px-3 py-1 rounded">
+                                🗑️ Remover
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Trocar tabs
+        function switchTab(tab) {
+            // Esconder todos os conteúdos
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => {
+                el.classList.remove('border-yellow-500', 'text-yellow-600', 'active');
+                el.classList.add('border-transparent', 'text-gray-500');
+            });
+
+            // Mostrar conteúdo selecionado
+            document.getElementById(`content-${tab}`).classList.remove('hidden');
+            const btn = document.getElementById(`tab-${tab}`);
+            btn.classList.add('border-yellow-500', 'text-yellow-600', 'active');
+            btn.classList.remove('border-transparent', 'text-gray-500');
+        }
+
+        // Mostrar/esconder input de percentagem
+        document.getElementById('newRuleCondition').addEventListener('change', function() {
+            const percentageInput = document.getElementById('percentageInput');
+            if (this.value === 'must_not_exceed_percentage') {
+                percentageInput.style.display = 'block';
+            } else {
+                percentageInput.style.display = 'none';
+            }
+        });
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRules();
+        });
+    </script>
+</body>
+</html>

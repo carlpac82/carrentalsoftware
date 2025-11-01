@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Copy Strategies</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="p-8 bg-gray-50">
+    <h1 class="text-2xl font-bold mb-4">🧪 Test Copy Strategies - DIAGNÓSTICO COMPLETO</h1>
+    
+    <div class="bg-white p-4 rounded shadow mb-4">
+        <h2 class="font-bold mb-2">1. Criar Estratégia Teste</h2>
+        <button onclick="createTestStrategy()" class="px-4 py-2 bg-green-600 text-white rounded">
+            Criar Nov/Dia 1 com estratégia
+        </button>
+        <pre id="result1" class="mt-2 text-xs bg-gray-100 p-2"></pre>
+    </div>
+    
+    <div class="bg-white p-4 rounded shadow mb-4">
+        <h2 class="font-bold mb-2">2. Copiar para Dia 2</h2>
+        <button onclick="copyToDay2()" class="px-4 py-2 bg-blue-600 text-white rounded">
+            Copiar Nov/1 → Nov/2
+        </button>
+        <pre id="result2" class="mt-2 text-xs bg-gray-100 p-2"></pre>
+    </div>
+    
+    <div class="bg-white p-4 rounded shadow mb-4">
+        <h2 class="font-bold mb-2">3. Verificar Dia 2</h2>
+        <button onclick="checkDay2()" class="px-4 py-2 bg-purple-600 text-white rounded">
+            Verificar se Dia 2 tem estratégia
+        </button>
+        <pre id="result3" class="mt-2 text-xs bg-gray-100 p-2"></pre>
+    </div>
+    
+    <div class="bg-white p-4 rounded shadow mb-4">
+        <h2 class="font-bold mb-2">4. Ver TUDO no localStorage</h2>
+        <button onclick="showAll()" class="px-4 py-2 bg-orange-600 text-white rounded">
+            Mostrar localStorage completo
+        </button>
+        <pre id="result4" class="mt-2 text-xs bg-gray-100 p-2 max-h-96 overflow-auto"></pre>
+    </div>
+
+    <script>
+        const location = 'Albufeira';
+        const grupo = 'B1';
+        
+        function createTestStrategy() {
+            const rules = {};
+            rules[location] = {};
+            rules[location][grupo] = {
+                months: {
+                    11: {  // November
+                        days: {
+                            1: {
+                                strategies: [
+                                    {
+                                        type: 'follow_lowest',
+                                        diffType: 'cents',
+                                        diffValue: 0.5
+                                    }
+                                ]
+                            }
+                        }
+                    }
+                }
+            };
+            
+            localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
+            document.getElementById('result1').textContent = 
+                '✅ Criado: Nov/Dia 1 com 1 estratégia\n' + 
+                JSON.stringify(rules[location][grupo].months[11].days[1], null, 2);
+        }
+        
+        function copyToDay2() {
+            const rules = JSON.parse(localStorage.getItem('automatedPriceRules') || '{}');
+            const sourceConfig = rules[location]?.[grupo]?.months?.[11]?.days?.[1];
+            
+            if (!sourceConfig) {
+                document.getElementById('result2').textContent = '❌ ERRO: Nov/Dia 1 não tem dados!';
+                return;
+            }
+            
+            // Copiar para dia 2
+            if (!rules[location][grupo].months[11].days[2]) {
+                rules[location][grupo].months[11].days[2] = {};
+            }
+            
+            rules[location][grupo].months[11].days[2] = JSON.parse(JSON.stringify(sourceConfig));
+            
+            localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
+            
+            document.getElementById('result2').textContent = 
+                '✅ Copiado para Nov/Dia 2\n' +
+                'Estratégias: ' + rules[location][grupo].months[11].days[2].strategies.length;
+        }
+        
+        function checkDay2() {
+            const rules = JSON.parse(localStorage.getItem('automatedPriceRules') || '{}');
+            const day2Data = rules[location]?.[grupo]?.months?.[11]?.days?.[2];
+            
+            if (!day2Data) {
+                document.getElementById('result3').textContent = '❌ Nov/Dia 2 NÃO TEM DADOS!';
+                return;
+            }
+            
+            if (day2Data.strategies && day2Data.strategies.length > 0) {
+                document.getElementById('result3').textContent = 
+                    '✅ Nov/Dia 2 TEM ' + day2Data.strategies.length + ' ESTRATÉGIA(S)\n' +
+                    JSON.stringify(day2Data, null, 2);
+            } else {
+                document.getElementById('result3').textContent = 
+                    '❌ Nov/Dia 2 existe mas SEM ESTRATÉGIAS\n' +
+                    JSON.stringify(day2Data, null, 2);
+            }
+        }
+        
+        function showAll() {
+            const rules = JSON.parse(localStorage.getItem('automatedPriceRules') || '{}');
+            document.getElementById('result4').textContent = 
+                'TUDO no localStorage:\n\n' +
+                JSON.stringify(rules, null, 2);
+        }
+    </script>
+</body>
+</html>

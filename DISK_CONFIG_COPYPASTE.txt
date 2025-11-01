@@ -1,0 +1,52 @@
+===============================================
+CONFIGURAÇÃO DO DISK - COPY/PASTE
+===============================================
+
+🌐 URL:
+https://dashboard.render.com/
+
+📦 Service:
+carrental-final
+
+📂 Menu:
+Disks
+
+➕ Botão:
++ Add Disk
+
+===============================================
+FORMULÁRIO (copy/paste cada campo):
+===============================================
+
+Name:
+rental-tracker-data
+
+Mount Path:
+/app/data
+
+Size:
+1
+
+Unit:
+GB
+
+===============================================
+
+Depois clicar em: Add Disk (ou Save)
+
+Aguardar 3-5 minutos (redeploy)
+
+✅ PRONTO!
+
+===============================================
+VERIFICAR SE FUNCIONOU:
+===============================================
+
+1. Ir para: https://carrental-final.onrender.com/setup-users
+2. Criar users
+3. Login
+4. Fazer novo Manual Deploy (Dashboard → Manual Deploy)
+5. Login novamente com MESMA password
+6. Se funcionar = Disk configurado com sucesso! ✅
+
+===============================================

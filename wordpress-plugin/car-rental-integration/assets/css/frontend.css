@@ -1,0 +1,538 @@
+/**
+ * Car Rental Integration - Frontend Styles
+ * Professional, modern design for car rental search and results
+ */
+
+/* ====================
+   Colors & Variables
+   ==================== */
+:root {
+    --cri-primary: #009cb6;
+    --cri-primary-hover: #0088a0;
+    --cri-secondary: #f4ad0f;
+    --cri-success: #10b981;
+    --cri-error: #ef4444;
+    --cri-text: #1f2937;
+    --cri-text-light: #6b7280;
+    --cri-border: #e5e7eb;
+    --cri-bg-light: #f9fafb;
+    --cri-white: #ffffff;
+    --cri-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    --cri-shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --cri-radius: 8px;
+    --cri-transition: all 0.2s ease;
+}
+
+/* ====================
+   Search Form
+   ==================== */
+.cri-search-wrapper {
+    margin: 2rem 0;
+}
+
+.cri-search-form {
+    background: var(--cri-white);
+    border: 1px solid var(--cri-border);
+    border-radius: var(--cri-radius);
+    padding: 1.5rem;
+    box-shadow: var(--cri-shadow);
+}
+
+.cri-form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    align-items: end;
+}
+
+.cri-layout-horizontal .cri-form-row {
+    grid-template-columns: 2fr 2fr 1.5fr 1fr;
+}
+
+.cri-form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.cri-form-group label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--cri-text);
+    margin-bottom: 0.5rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.cri-label-icon {
+    font-size: 1.125rem;
+}
+
+.cri-input,
+.cri-select {
+    padding: 0.625rem 0.875rem;
+    border: 1px solid var(--cri-border);
+    border-radius: calc(var(--cri-radius) - 2px);
+    font-size: 1rem;
+    transition: var(--cri-transition);
+    background: var(--cri-white);
+    width: 100%;
+}
+
+.cri-input:focus,
+.cri-select:focus {
+    outline: none;
+    border-color: var(--cri-primary);
+    box-shadow: 0 0 0 3px rgba(0, 156, 182, 0.1);
+}
+
+.cri-btn {
+    padding: 0.625rem 1.5rem;
+    border-radius: calc(var(--cri-radius) - 2px);
+    font-weight: 600;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: var(--cri-transition);
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    text-decoration: none;
+}
+
+.cri-btn-primary {
+    background: var(--cri-primary);
+    color: var(--cri-white);
+}
+
+.cri-btn-primary:hover {
+    background: var(--cri-primary-hover);
+    transform: translateY(-1px);
+    box-shadow: var(--cri-shadow);
+}
+
+.cri-btn-secondary {
+    background: var(--cri-secondary);
+    color: var(--cri-text);
+}
+
+.cri-btn-secondary:hover {
+    background: #e09d0a;
+}
+
+.cri-btn-full {
+    width: 100%;
+}
+
+.cri-btn-small {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.cri-toggle-filters {
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background: var(--cri-bg-light);
+    border: 1px solid var(--cri-border);
+    border-radius: calc(var(--cri-radius) - 2px);
+    cursor: pointer;
+    font-size: 0.875rem;
+    transition: var(--cri-transition);
+}
+
+.cri-toggle-filters:hover {
+    background: var(--cri-border);
+}
+
+.cri-filters-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--cri-border);
+}
+
+/* ====================
+   Results Container
+   ==================== */
+.cri-results-container {
+    margin-top: 2rem;
+}
+
+.cri-loading {
+    text-align: center;
+    padding: 3rem 1rem;
+}
+
+.cri-spinner {
+    border: 4px solid var(--cri-border);
+    border-top-color: var(--cri-primary);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    animation: cri-spin 0.8s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes cri-spin {
+    to { transform: rotate(360deg); }
+}
+
+.cri-error-message {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    color: var(--cri-error);
+    padding: 1rem;
+    border-radius: var(--cri-radius);
+    margin-bottom: 1rem;
+}
+
+.cri-no-results {
+    text-align: center;
+    padding: 3rem 1rem;
+    background: var(--cri-bg-light);
+    border-radius: var(--cri-radius);
+}
+
+/* ====================
+   Price List & Cards
+   ==================== */
+.cri-results-header {
+    margin-bottom: 1.5rem;
+}
+
+.cri-results-header h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.5rem;
+    color: var(--cri-text);
+}
+
+.cri-results-info {
+    display: flex;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--cri-text-light);
+}
+
+.cri-results-grid {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.cri-columns-1 { grid-template-columns: 1fr; }
+.cri-columns-2 { grid-template-columns: repeat(2, 1fr); }
+.cri-columns-3 { grid-template-columns: repeat(3, 1fr); }
+.cri-columns-4 { grid-template-columns: repeat(4, 1fr); }
+
+@media (max-width: 1024px) {
+    .cri-columns-3,
+    .cri-columns-4 {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 640px) {
+    .cri-results-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+.cri-price-card {
+    background: var(--cri-white);
+    border: 1px solid var(--cri-border);
+    border-radius: var(--cri-radius);
+    overflow: hidden;
+    transition: var(--cri-transition);
+    display: flex;
+    flex-direction: column;
+}
+
+.cri-price-card:hover {
+    box-shadow: var(--cri-shadow-lg);
+    transform: translateY(-2px);
+}
+
+.cri-card-image {
+    width: 100%;
+    height: 180px;
+    overflow: hidden;
+    background: var(--cri-bg-light);
+}
+
+.cri-card-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.cri-card-content {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.cri-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: start;
+    margin-bottom: 0.75rem;
+}
+
+.cri-car-name {
+    margin: 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--cri-text);
+    flex: 1;
+}
+
+.cri-group-badge {
+    background: var(--cri-primary);
+    color: var(--cri-white);
+    padding: 0.25rem 0.625rem;
+    border-radius: calc(var(--cri-radius) - 4px);
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.cri-card-details {
+    margin-bottom: 1rem;
+    flex-grow: 1;
+}
+
+.cri-detail {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--cri-text-light);
+}
+
+.cri-detail-icon {
+    font-size: 1rem;
+}
+
+.cri-card-footer {
+    border-top: 1px solid var(--cri-border);
+    padding-top: 1rem;
+}
+
+.cri-pricing {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.cri-price-daily,
+.cri-price-total {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.cri-price-label {
+    font-size: 0.75rem;
+    color: var(--cri-text-light);
+    text-transform: uppercase;
+    font-weight: 600;
+}
+
+.cri-price-amount {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--cri-primary);
+}
+
+.cri-price-total .cri-price-amount {
+    font-size: 1rem;
+}
+
+.cri-btn-book {
+    width: 100%;
+}
+
+/* ====================
+   Cheapest Cars / Deals
+   ==================== */
+.cri-cheapest-cars {
+    margin: 2rem 0;
+}
+
+.cri-section-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.cri-section-header h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.75rem;
+    color: var(--cri-text);
+}
+
+.cri-section-subtitle {
+    color: var(--cri-text-light);
+    margin: 0;
+}
+
+.cri-deals-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.cri-deal-card {
+    background: var(--cri-white);
+    border: 2px solid var(--cri-border);
+    border-radius: var(--cri-radius);
+    padding: 1.5rem;
+    position: relative;
+    transition: var(--cri-transition);
+}
+
+.cri-deal-card:hover {
+    border-color: var(--cri-primary);
+    box-shadow: var(--cri-shadow-lg);
+}
+
+.cri-best-deal {
+    border-color: var(--cri-secondary);
+    background: linear-gradient(135deg, #fffbeb 0%, var(--cri-white) 100%);
+}
+
+.cri-deal-badge {
+    position: absolute;
+    top: -12px;
+    right: 1rem;
+    background: var(--cri-secondary);
+    color: var(--cri-text);
+    padding: 0.375rem 0.875rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    box-shadow: var(--cri-shadow);
+}
+
+.cri-deal-title {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.25rem;
+    color: var(--cri-text);
+}
+
+.cri-deal-category {
+    margin: 0 0 1rem 0;
+    color: var(--cri-text-light);
+    font-size: 0.875rem;
+}
+
+.cri-deal-details {
+    margin-bottom: 1.5rem;
+}
+
+.cri-deal-detail {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.cri-deal-pricing {
+    text-align: center;
+    padding: 1rem;
+    background: var(--cri-bg-light);
+    border-radius: calc(var(--cri-radius) - 2px);
+    margin-bottom: 1rem;
+}
+
+.cri-deal-price-main {
+    display: flex;
+    align-items: baseline;
+    justify-content: center;
+    gap: 0.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.cri-currency {
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.cri-amount {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: var(--cri-primary);
+}
+
+.cri-period {
+    font-size: 1rem;
+    color: var(--cri-text-light);
+}
+
+.cri-deal-price-total {
+    font-size: 0.875rem;
+    color: var(--cri-text-light);
+}
+
+/* ====================
+   Table Layout
+   ==================== */
+.cri-deals-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--cri-white);
+    border-radius: var(--cri-radius);
+    overflow: hidden;
+    box-shadow: var(--cri-shadow);
+}
+
+.cri-deals-table th {
+    background: var(--cri-primary);
+    color: var(--cri-white);
+    padding: 1rem;
+    text-align: left;
+    font-weight: 600;
+}
+
+.cri-deals-table td {
+    padding: 1rem;
+    border-bottom: 1px solid var(--cri-border);
+}
+
+.cri-deal-row:hover {
+    background: var(--cri-bg-light);
+}
+
+.cri-medal {
+    font-size: 1.5rem;
+}
+
+.cri-rank-number {
+    font-weight: 700;
+    color: var(--cri-text-light);
+}
+
+.cri-category {
+    color: var(--cri-text-light);
+}
+
+/* ====================
+   Responsive
+   ==================== */
+@media (max-width: 768px) {
+    .cri-layout-horizontal .cri-form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .cri-deals-table {
+        font-size: 0.875rem;
+    }
+    
+    .cri-deals-table th,
+    .cri-deals-table td {
+        padding: 0.75rem 0.5rem;
+    }
+}

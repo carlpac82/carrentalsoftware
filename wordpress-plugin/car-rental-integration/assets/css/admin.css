@@ -1,0 +1,55 @@
+/**
+ * Car Rental Integration - Admin Styles
+ * Styling for WordPress admin settings page
+ */
+
+.cri-usage-guide {
+    max-width: 900px;
+}
+
+.cri-usage-guide .card {
+    background: #fff;
+    border: 1px solid #ccd0d4;
+    box-shadow: 0 1px 1px rgba(0,0,0,.04);
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.cri-usage-guide h3 {
+    margin-top: 1.5em;
+    margin-bottom: 0.5em;
+    font-size: 1.3em;
+}
+
+.cri-usage-guide h4 {
+    margin-top: 1.2em;
+    margin-bottom: 0.5em;
+    color: #23282d;
+}
+
+.cri-usage-guide code {
+    display: block;
+    background: #f0f0f1;
+    padding: 12px 15px;
+    border-left: 4px solid #009cb6;
+    margin: 10px 0;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    line-height: 1.6;
+    overflow-x: auto;
+}
+
+.cri-usage-guide hr {
+    margin: 30px 0;
+    border: none;
+    border-top: 1px solid #ccd0d4;
+}
+
+.cri-test-connection,
+.cri-clear-cache {
+    display: inline-block;
+}
+
+.wrap form + div {
+    margin-top: 15px;
+}

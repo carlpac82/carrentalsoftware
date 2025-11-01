@@ -1,0 +1,17 @@
+FORCE DEPLOY - 2025-01-28 23:31:00
+
+CRITICAL: Render is using OLD cached code!
+
+MISSING FEATURES:
+- ❌ Vehicles tab not showing
+- ❌ New users not visible  
+- ❌ Startup version message not in logs
+- ❌ Blocklist still active
+
+EXPECTED VERSION IN LOGS:
+========================================
+🚀 APP STARTUP - VERSION: 2025-01-28-23-22-VEHICLES-FIX
+📦 Features: Vehicles Management, Automatic Field, Blocklist Removed
+========================================
+
+IF YOU SEE THIS FILE, DO MANUAL DEPLOY WITH "CLEAR BUILD CACHE"!

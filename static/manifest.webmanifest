@@ -1,0 +1,13 @@
+{
+  "name": "Car Rental Tracker",
+  "short_name": "CarTracker",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#009cb6",
+  "icons": [
+    { "src": "/static/autoprudente-favicon.png?v=2", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/static/autoprudente-favicon.png?v=2", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

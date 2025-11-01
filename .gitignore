@@ -1,0 +1,31 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.sqlite3
+.env
+.venv/
+venv/
+.vscode/
+.idea/
+.DS_Store
+node_modules/
+static/debug/
+data.db
+car_images.db
+*.db
+uploads/
+
+# Backups (não commitar arquivos de backup)
+backups/*.tar.gz
+backups/backup_*/
+!backups/README.md
+
+# Logs
+logs/
+*.log
+
+# Cache
+cache/
+__pycache__/
+backups/

@@ -1,0 +1,370 @@
+<!-- Mobile-Friendly Styles - Include in all templates -->
+<style>
+/* ============================================================================
+   MOBILE-FRIENDLY IMPROVEMENTS
+   ============================================================================ */
+
+/* Base Mobile Optimizations */
+@media (max-width: 768px) {
+    /* Prevent horizontal scroll */
+    body {
+        overflow-x: hidden;
+    }
+    
+    /* Responsive containers */
+    .mx-auto.max-w-7xl,
+    .mx-auto.max-w-6xl,
+    .mx-auto.max-w-4xl {
+        padding-left: 1rem !important;
+        padding-right: 1rem !important;
+    }
+    
+    /* Touch-friendly buttons - minimum 44x44px */
+    button, .btn, a.btn {
+        min-height: 44px;
+        min-width: 44px;
+        padding: 12px 16px;
+        font-size: 16px; /* Prevent iOS zoom on focus */
+    }
+    
+    /* Touch-friendly inputs */
+    input, select, textarea {
+        min-height: 44px;
+        font-size: 16px; /* Prevent iOS zoom */
+        padding: 10px 12px;
+    }
+    
+    /* Responsive tables - horizontal scroll */
+    .table-container {
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        margin: 0 -1rem;
+        padding: 0 1rem;
+    }
+    
+    table {
+        min-width: 600px; /* Force horizontal scroll on small screens */
+    }
+    
+    /* Stack form elements vertically */
+    .flex.items-center.gap-4,
+    .flex.items-center.gap-3,
+    .flex.items-center.gap-2 {
+        flex-direction: column;
+        align-items: stretch !important;
+        width: 100%;
+    }
+    
+    /* Full width form inputs */
+    .seg {
+        flex-direction: column;
+        align-items: stretch !important;
+        height: auto !important;
+        padding: 12px !important;
+    }
+    
+    .seg input,
+    .seg select {
+        width: 100% !important;
+        min-width: 100% !important;
+    }
+    
+    /* Responsive grid - single column on mobile */
+    .grid.grid-cols-2,
+    .grid.grid-cols-3,
+    .grid.grid-cols-4 {
+        grid-template-columns: 1fr !important;
+    }
+    
+    /* Header adjustments */
+    header .flex.items-center.justify-between {
+        flex-wrap: wrap;
+    }
+    
+    header img {
+        max-height: 40px !important;
+    }
+    
+    /* Navigation icons - larger touch targets */
+    header a svg,
+    header button svg {
+        width: 24px !important;
+        height: 24px !important;
+    }
+    
+    /* Modal/Dialog full screen on mobile */
+    .modal, .dialog {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100vh !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+    }
+    
+    /* Accordion content - better mobile scroll */
+    .accordion-content {
+        max-height: 60vh !important;
+    }
+    
+    /* Price cards - stack vertically */
+    .price-card {
+        margin-bottom: 1rem;
+    }
+    
+    /* Hide desktop-only elements */
+    .desktop-only {
+        display: none !important;
+    }
+    
+    /* Show mobile-only elements */
+    .mobile-only {
+        display: block !important;
+    }
+}
+
+/* Tablet optimizations (768px - 1024px) */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .grid.grid-cols-4 {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    
+    .grid.grid-cols-3 {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+/* Desktop */
+@media (min-width: 769px) {
+    .mobile-only {
+        display: none !important;
+    }
+    
+    .desktop-only {
+        display: block !important;
+    }
+}
+
+/* ============================================================================
+   MOBILE NAVIGATION MENU (Hamburger)
+   ============================================================================ */
+
+.mobile-menu-btn {
+    display: none;
+    background: none;
+    border: none;
+    color: white;
+    padding: 8px;
+    cursor: pointer;
+}
+
+.mobile-menu {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 9999;
+    padding: 20px;
+}
+
+.mobile-menu.active {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.mobile-menu a {
+    color: white;
+    font-size: 24px;
+    padding: 20px;
+    text-decoration: none;
+    width: 100%;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.mobile-menu-close {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    background: none;
+    border: none;
+    color: white;
+    font-size: 32px;
+    cursor: pointer;
+}
+
+@media (max-width: 768px) {
+    .mobile-menu-btn {
+        display: block;
+    }
+    
+    .desktop-nav {
+        display: none !important;
+    }
+}
+
+/* ============================================================================
+   TOUCH OPTIMIZATIONS
+   ============================================================================ */
+
+/* Larger tap targets */
+@media (max-width: 768px) {
+    /* Tab buttons */
+    .tab-btn {
+        padding: 16px 20px !important;
+        font-size: 16px !important;
+    }
+    
+    /* Icon buttons */
+    .p-2 {
+        padding: 12px !important;
+    }
+    
+    /* Links in tables */
+    table a {
+        padding: 8px 12px;
+        display: inline-block;
+    }
+}
+
+/* ============================================================================
+   SCROLLABLE TABLES
+   ============================================================================ */
+
+.table-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-scroll table {
+    width: 100%;
+    min-width: 600px;
+}
+
+/* Sticky first column on mobile */
+@media (max-width: 768px) {
+    .table-scroll table th:first-child,
+    .table-scroll table td:first-child {
+        position: sticky;
+        left: 0;
+        background: white;
+        z-index: 1;
+        box-shadow: 2px 0 4px rgba(0,0,0,0.1);
+    }
+}
+
+/* ============================================================================
+   IMPROVED SPACING ON MOBILE
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    /* Reduce padding on cards */
+    .bg-white.shadow,
+    .bg-white.rounded {
+        padding: 1rem !important;
+    }
+    
+    /* Smaller gaps */
+    .gap-6 {
+        gap: 1rem !important;
+    }
+    
+    .gap-4 {
+        gap: 0.75rem !important;
+    }
+    
+    /* Smaller margins */
+    .mb-6 {
+        margin-bottom: 1rem !important;
+    }
+    
+    .mb-4 {
+        margin-bottom: 0.75rem !important;
+    }
+    
+    /* Smaller text on mobile */
+    h1 {
+        font-size: 1.5rem !important;
+    }
+    
+    h2 {
+        font-size: 1.25rem !important;
+    }
+    
+    .text-sm {
+        font-size: 0.875rem !important;
+    }
+}
+
+/* ============================================================================
+   LOADING STATES - MOBILE OPTIMIZED
+   ============================================================================ */
+
+@media (max-width: 768px) {
+    .loading-title {
+        font-size: 1.25rem !important;
+    }
+    
+    .scene {
+        height: 120px !important;
+    }
+}
+
+/* ============================================================================
+   ACCESSIBILITY - TOUCH FEEDBACK
+   ============================================================================ */
+
+button:active,
+a:active,
+.btn:active {
+    opacity: 0.7;
+    transform: scale(0.98);
+}
+
+/* ============================================================================
+   SAFE AREA INSETS (iPhone notch, etc)
+   ============================================================================ */
+
+@supports (padding: max(0px)) {
+    body {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+    
+    header {
+        padding-top: env(safe-area-inset-top);
+    }
+}
+</style>
+
+<!-- Mobile Menu HTML (add to header) -->
+<div class="mobile-menu" id="mobileMenu">
+    <button class="mobile-menu-close" onclick="closeMobileMenu()">×</button>
+    <a href="/">Home</a>
+    <a href="/price-automation/fill">Price Automation</a>
+    <a href="/admin">Settings</a>
+    <a href="/logout" onclick="event.preventDefault(); document.querySelector('form[action=\'/logout\']').submit();">Logout</a>
+</div>
+
+<script>
+function openMobileMenu() {
+    document.getElementById('mobileMenu').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeMobileMenu() {
+    document.getElementById('mobileMenu').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// Close menu on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeMobileMenu();
+    }
+});
+</script>

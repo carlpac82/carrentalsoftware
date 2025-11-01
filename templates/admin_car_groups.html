@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <title>Vehicles - Settings</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      img[alt="Profile"], img[src*="profile"], .profile-picture {
+        border-radius: 50% !important;
+      }
+    </style>
+    <script>
+      if (window.location.search.includes("iframe=1")) {
+        document.addEventListener("DOMContentLoaded", function() {
+          const header = document.querySelector("header");
+          if (header) header.style.display = "none";
+        });
+      }
+    </script>
+  </head>
+  <body class="bg-gray-50">
+    <header style="background:#009cb6;" class="w-full py-3">
+      <div class="mx-auto max-w-4xl px-4 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <a href="/"><img src="/static/ap-heather.png" alt="Car Rental Tracker" class="h-12 w-auto" /></a>
+          <span class="text-white text-sm font-medium">Settings</span>
+        </div>
+        <nav class="flex items-center gap-3">
+          <a href="/" class="p-2 text-white/90 hover:text-white hover:bg-white/10 transition-all" title="Home"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg></a>
+          <form method="post" action="/logout"><button type="submit" class="p-2 text-white/90 hover:text-white hover:bg-white/10 transition-all" title="Logout"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg></button></form>
+        </nav>
+      </div>
+    </header>
+    <main class="mx-auto max-w-4xl px-4 py-6">
+      <div class="flex items-center justify-between mb-6">
+        <div class="flex items-center gap-3">
+          <h1 class="text-2xl font-semibold text-gray-800">Vehicles Management</h1>
+          <a href="/admin/car-groups/new" class="px-4 py-2 bg-[#f4ad0f] text-white rounded hover:bg-[#009cb6] transition-colors">
+            + New Vehicle
+          </a>
+        </div>
+        <div class="flex items-center gap-2">
+          <a href="/admin/users" class="px-3 py-2 rounded border border-[#009cb6] text-[#009cb6] text-sm bg-white hover:bg-[#f6b511] hover:border-[#f6b511] hover:text-white transition-colors">Users</a>
+          <a href="/admin/settings" class="px-3 py-2 rounded border border-[#009cb6] text-[#009cb6] text-sm bg-white hover:bg-[#f6b511] hover:border-[#f6b511] hover:text-white transition-colors">Price Adjustment</a>
+        </div>
+      </div>
+      {% if groups %}
+      <div class="bg-white shadow rounded-lg overflow-hidden">
+        <table class="min-w-full divide-y divide-gray-200">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Photo</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Brand</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Model</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Code</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Specs</th>
+              <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+              <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+            </tr>
+          </thead>
+          <tbody class="bg-white divide-y divide-gray-200">
+            {% for g in groups %}
+            <tr>
+              <td class="px-6 py-4 whitespace-nowrap">
+                {% if g.photo_url %}
+                <img src="{{g.photo_url}}" alt="{{g.name}}" class="h-12 w-16 object-cover rounded"/>
+                {% else %}
+                <div class="h-12 w-16 bg-gray-200 rounded flex items-center justify-center text-xs text-gray-400">No photo</div>
+                {% endif %}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">{{g.brand}}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{g.model}}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">{{g.code}}</td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm">
+                {% if g.category == "Uncategorized" %}
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">Uncategorized</span>
+                {% else %}
+                <span class="text-gray-700">{{g.category}}</span>
+                {% endif %}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                {{g.seats or '-'}} seats | {{g.doors or '-'}} doors<br/>
+                <span class="text-xs">
+                  {% if g.is_automatic %}
+                  <span class="text-blue-600 font-semibold">🔄 Automatic</span>
+                  {% else %}
+                  {{g.transmission or 'Manual'}}
+                  {% endif %}
+                </span>
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap">
+                {% if g.enabled %}
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">Active</span>
+                {% else %}
+                <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">Disabled</span>
+                {% endif %}
+              </td>
+              <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <a href="/admin/car-groups/{{g.id}}/edit" class="text-blue-600 hover:text-blue-900 mr-3">Edit</a>
+                <form method="post" action="/admin/car-groups/{{g.id}}/delete" style="display:inline;" onsubmit="return confirm('Delete this vehicle?');">
+                  <button type="submit" class="text-red-600 hover:text-red-900">Delete</button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}
+      <div class="bg-white shadow rounded-lg p-6 text-center text-gray-500">
+        No vehicles yet. <a href="/admin/car-groups/new" class="text-blue-600 hover:underline">Add first vehicle</a>.
+      </div>
+      {% endif %}
+    </main>
+  </body>
+</html>

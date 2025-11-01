@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Guardar HTML CarJet</title>
+</head>
+<body>
+    <h1>📋 Como Guardar HTML do CarJet</h1>
+    
+    <h2>Passo 1: Abrir CarJet com Filtro AUTOPRUDENTE</h2>
+    <ol>
+        <li>Abre: <a href="https://www.carjet.com/do/list/pt?s=512a1ac5-8270-4643-913e-2aa0aef3dd20&b=d452abe6-1de3-4951-9103-97e795e8adcb" target="_blank">CarJet Faro</a></li>
+        <li>Aguarda a página carregar completamente</li>
+        <li>Verifica que apenas AUTOPRUDENTE está selecionado</li>
+    </ol>
+    
+    <h2>Passo 2: Guardar HTML</h2>
+    <ol>
+        <li>Clica direito na página</li>
+        <li>Seleciona "Guardar como..." ou "Save as..."</li>
+        <li>Guarda como: <code>carjet_autoprudente.html</code></li>
+        <li>Localização: <code>/Users/filipepacheco/CascadeProjects/RentalPriceTrackerPerDay/</code></li>
+    </ol>
+    
+    <h2>Passo 3: Analisar</h2>
+    <pre>
+cd /Users/filipepacheco/CascadeProjects/RentalPriceTrackerPerDay
+python3 analyze_carjet_autoprudente.py
+    </pre>
+    
+    <h2>Alternativa: Copiar HTML Diretamente</h2>
+    <ol>
+        <li>Abre DevTools (F12)</li>
+        <li>Tab "Elements"</li>
+        <li>Clica direito em <code>&lt;html&gt;</code></li>
+        <li>Copy → Copy outerHTML</li>
+        <li>Cola num ficheiro <code>carjet_autoprudente.html</code></li>
+    </ol>
+</body>
+</html>

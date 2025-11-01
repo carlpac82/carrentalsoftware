@@ -1,0 +1,1367 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="cache-bust" content="v2025-01-28-10-00-SIMPLIFIED"/>
+    <title>Rental Prices</title>
+    <link rel="icon" type="image/png" href="/static/autoprudente-favicon.png?v=2" />
+    <link rel="shortcut icon" href="/static/autoprudente-favicon.png?v=2" />
+    <link rel="apple-touch-icon" href="/static/autoprudente-favicon.png?v=2" />
+    <link rel="manifest" href="/static/manifest.webmanifest">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Car Rental Tracker">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+      :root {
+        --brand-yellow: #f4ad0f;
+        --brand-yellow-50: rgba(244, 173, 15, 0.2);
+        --brand-teal: #009cb6;
+        --brand-teal-20: rgba(0, 156, 182, 0.2);
+        --brand-header: #7ec6e0; /* header blue; send your brand hex and I'll update */
+      }
+      .progress { height: 12px; border-radius: 9999px; background: rgba(0,156,182,0.25); overflow: hidden; border: 1px solid #e5eef0; position: relative; z-index: 1; }
+      .progress .bar {
+        width: 0%; height: 100%; border-radius: inherit;
+        background: var(--brand-yellow);
+        transition: width .25s ease;
+      }
+      /* Logos outline */
+      .logo-badge { border: 1px solid #e5e7eb; border-radius: 8px; padding: 6px; background: #fff; box-shadow: 0 1px 0 #e5e7eb; }
+      .logo-badge img { display:block; height: 22px; width: auto; }
+      .logos-grid-4 { display:grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; align-items:center; justify-items:center; }
+      /* Moving background scene (inline SVG) */
+      @keyframes scrollStrip { from { transform: translateX(0); } to { transform: translateX(-600px); } }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      @-webkit-keyframes spin { to { -webkit-transform: rotate(360deg); transform: rotate(360deg); } }
+      .scene { position: relative; height: min(16vh, 180px); margin-bottom: 2px; overflow: hidden; border-radius: 10px; background: linear-gradient(#ffffff, #ffffff); display:flex; align-items:flex-end; justify-content:center; }
+      .car-vehicle { position: relative; z-index: 2; display: block; pointer-events: none; }
+      .wheel { transform-box: fill-box; transform-origin: center; }
+      .wheel-rotor { transform-box: fill-box; transform-origin: center; animation: spin .6s linear infinite; -webkit-animation: spin .6s linear infinite; will-change: transform; }
+      .scene-bg { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; z-index: 0; }
+      @keyframes scrollX { from { background-position: 0 100%; } to { background-position: -600px 100%; } }
+      @keyframes drift { from { transform: translateX(0); } to { transform: translateX(-600px); } }
+      @keyframes driftSlow { from { transform: translateX(0); } to { transform: translateX(-300px); } }
+      .parallax { animation: drift 18s linear infinite; will-change: transform; }
+      .parallax-slow { animation: driftSlow 28s linear infinite; will-change: transform; }
+      .clouds { animation: drift 35s linear infinite; will-change: transform; }
+      /* Loading title animated dots */
+      .loading-title { line-height: 1.25; text-align:center; margin: 0 auto; }
+      /* 15% vertical gap (capped) between title and car */
+      .loading-gap { margin-bottom: min(15vh, 90px); }
+      .loading-title .dots{ display:inline-block; overflow:hidden; width:0ch; vertical-align:baseline; animation: loadingDots 1.2s steps(3,end) infinite; }
+      .loading-title .dots::after{ content:"..."; }
+      @keyframes loadingDots { from { width:0ch; } to { width:3ch; } }
+      /* Layered PNG backgrounds removed in favor of inline SVG landscape */
+      .layer { display:none; }
+      .scene-fallback { position:absolute; inset:0; z-index:0; pointer-events:none; }
+      .layer-ground { animation: scrollX 14s linear infinite; }
+      .layer-hills { animation: scrollX 22s linear infinite; background-position: 0 95%; }
+      .layer-trees { animation: scrollX 18s linear infinite; background-position: 0 98%; }
+      .layer-clouds { animation: scrollX 40s linear infinite; background-position: 0 10%; background-size: auto 120px; }
+      /* Removed external photo layer to keep fully transparent background */
+      /* Removed vertical bounce so wheels remain fixed in place */
+      .group-title { background-color: var(--brand-yellow); transition: background-color .15s ease-in-out; }
+      .group-title:hover { background-color: #e39e0e; }
+      /* Mobile-friendly scroll for expanded groups */
+      .accordion-content { max-height: 70vh; overflow-y: auto; }
+      @media (min-width: 768px) { .accordion-content { max-height: none; overflow: visible; } }
+      /* Inline form styling resembling Carjet */
+      .seg { display:flex; align-items:center; gap:8px; background:#f8fafc; border:1px solid #e5e7eb; border-radius:8px; padding:8px 10px; height:48px; }
+      .seg-badge { background:#009cb6; color:#fff; font-weight:700; border-radius:6px; padding:4px 8px; line-height:1; min-width:26px; text-align:center; flex-shrink:0; }
+      .seg input, .seg select { background:#fff; border:1px solid #d1d5db; border-radius:6px; padding:4px 8px; font-size:14px; line-height:1.4; height:32px; }
+      .seg .label { font-size:12px; color:#374151; margin-right:4px; }
+      .btn-search { background:#009cb6; color:#fff; font-weight:600; border-radius:8px; padding:10px 16px; }
+      .btn-search:hover, .btn-search:focus { background: var(--brand-yellow); color:#fff; }
+      button:hover, button:focus { background-color: var(--brand-yellow); color:#fff; }
+      .lowest-badge { background: var(--brand-header); color:#fff; padding:2px 8px; border-radius:9999px; font-size:10px; line-height:1; }
+      .date-input { min-width: 120px; max-width: 140px; }
+      .time-input { min-width: 90px; }
+      .days-input { min-width: 80px; }
+      .nowrap { white-space: nowrap; }
+      /* Calendário maior no desktop */
+      @media (min-width: 768px) {
+        input[type="date"]::-webkit-calendar-picker-indicator {
+          font-size: 20px;
+          cursor: pointer;
+        }
+        input[type="date"] {
+          font-size: 16px;
+        }
+      }
+      .bar { display:block; height:6px; border-radius:3px; }
+      .bar-blue { background:#009cb6; width:36px; }
+      .bar-yellow { background: var(--brand-yellow); width:28px; }
+      /* Progress bar fixed yellow (no color animation) */
+      #loadingModal .progress .bar { background: var(--brand-yellow); }
+      #loadingModal.loading .progress .bar { animation: none; }
+    </style>
+  </head>
+  <body class="min-h-screen bg-gray-50">
+    <noscript>
+      <div class="p-3 text-red-700 bg-red-50">This app works best with JavaScript enabled.</div>
+    </noscript>
+    <header class="bg-[#009cb6] border-b">
+      <div class="mx-auto max-w-6xl px-4 py-3 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <a href="/" class="inline-flex items-center" title="Homepage">
+            <img src="/static/ap-heather.png" alt="Auto Prudente" class="h-12 w-auto" />
+          </a>
+          <span class="sr-only">Carjet Rental Price Tracker</span>
+        </div>
+        <div class="flex items-center gap-4">
+          {% if current_user %}
+          <div class="hidden md:flex items-center gap-2">
+            {% if current_user.profile_picture_path %}
+            <img src="{{ current_user.profile_picture_path }}" alt="Profile" class="h-8 w-8 rounded-full object-cover border border-white/40" />
+            {% else %}
+            <div class="h-8 w-8 rounded-full bg-white/20 text-white flex items-center justify-center text-xs font-semibold">
+              {{ (current_user.first_name[:1] or 'U') | upper }}
+            </div>
+            {% endif %}
+            <span class="text-white/95 text-sm font-medium">{{ (current_user.first_name + ' ' + current_user.last_name).strip() or current_user.username }}</span>
+          </div>
+          {% endif %}
+          {% if request.session and request.session.get('is_admin') %}
+          <a href="/admin/users" class="text-xs md:text-sm text-white/90 hover:text-white underline">Admin</a>
+          {% endif %}
+          <form method="post" action="/logout">
+            <button class="text-xs md:text-sm text-white/90 hover:text-white transition-colors">Logout</button>
+          </form>
+        </div>
+      </div>
+    </header>
+
+    <main class="mx-auto max-w-6xl px-4 py-6 space-y-8">
+      
+
+      <section class="bg-white rounded-lg shadow p-4">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="font-medium border-l-4 border-[#f6b511] pl-3">Pesquisar por parâmetros</h2>
+        </div>
+        <form id="paramForm" class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end" onsubmit="return false">
+          <div class="md:col-span-3 seg">
+            <label class="sr-only">Local de entrega</label>
+            <select id="location" style="flex:1; min-width:0;">
+              <option value="Aeroporto de Faro">Aeroporto de Faro</option>
+              <option value="Albufeira">Albufeira</option>
+            </select>
+          </div>
+          <!-- Data de início (segundo campo) -->
+          <div class="md:col-span-2 seg">
+            <span class="seg-badge"><svg width="14" height="14" viewBox="0 0 20 20" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M6 2a1 1 0 012 0v1h4V2a1 1 0 112 0v1h1a2 2 0 012 2v2H3V5a2 2 0 012-2h1V2zM3 9h14v6a2 2 0 01-2 2H5a2 2 0 01-2-2V9zm4 2a1 1 0 000 2h6a1 1 0 100-2H7z"/></svg></span>
+            <label class="sr-only">Início (data)</label>
+            <input id="startDate" type="date" placeholder="Início" class="date-input" style="flex:1; min-width:0;"/>
+          </div>
+          <!-- Dias (terceiro campo na mesma linha) -->
+          <div class="md:col-span-7 seg" style="flex-wrap: nowrap; overflow-x: auto;">
+            <label class="sr-only">Dias</label>
+            <input id="days" type="hidden" value="7" />
+            <div id="daysChips" class="flex flex-nowrap gap-1"></div>
+          </div>
+          <!-- Botões -->
+          <div class="md:col-span-12 flex gap-3 items-center flex-wrap">
+            <button id="fetchAllBtn" type="button" class="btn-search">Pesquisar</button>
+            <button id="fetchAllDaysBtn" type="button" class="px-4 py-2.5 text-sm font-semibold bg-[#f4ad0f] text-white rounded-lg hover:bg-[#009cb6] transition-colors">
+              📊 Fetch All (Todos os Dias)
+            </button>
+            <span id="fetchAllStatus" class="text-xs text-gray-500"></span>
+          </div>
+          <div class="md:col-span-1 seg hidden">
+            <label class="sr-only">Início (hora)</label>
+            <input id="startTime" type="time" value="10:00" placeholder="10:00" class="time-input w-full rounded-md border-gray-300" />
+          </div>
+          <div class="md:col-span-2 seg hidden">
+            <span class="seg-badge"><svg width="14" height="14" viewBox="0 0 20 20" fill="#fff" xmlns="http://www.w3.org/2000/svg"><path d="M6 2a1 1 0 012 0v1h4V2a1 1 0 112 0v1h1a2 2 0 012 2v2H3V5a2 2 0 012-2h1V2zM3 9h14v6a2 2 0 01-2 2H5a2 2 0 01-2-2V9zm4 2a1 1 0 000 2h6a1 1 0 100-2H7z"/></svg></span>
+            <span class="bar bar-yellow"></span>
+            <label class="sr-only">Fim (data)</label>
+            <input id="endDate" type="date" placeholder="Fim" class="date-input w-full rounded-md border-gray-300" />
+          </div>
+          <div class="md:col-span-1 seg hidden">
+            <label class="sr-only">Fim (hora)</label>
+            <input id="endTime" type="time" value="10:00" placeholder="10:00" class="time-input w-full rounded-md border-gray-300" />
+          </div>
+          <div class="md:col-span-3 flex items-center gap-3 md:justify-end hidden">
+            <label class="hidden flex items-center gap-2 nowrap" style="padding:0;">
+              <input id="samePlace" type="checkbox" class="rounded border-gray-300" checked />
+              <span class="text-sm text-gray-700">Devolver no mesmo local</span>
+            </label>
+            <select id="locationDrop" class="w-full rounded-md border-gray-300 hidden">
+              <option value="Aeroporto de Faro">Aeroporto de Faro</option>
+              <option value="Albufeira">Albufeira</option>
+            </select>
+            <span id="status" class="ml-3 text-sm text-gray-600"></span>
+          </div>
+        </form>
+        <div id="results" class="mt-4"></div>
+      </section>
+      
+    </main>
+
+    <!-- Loading modal -->
+    <div id="loadingModal" class="hidden fixed inset-0 z-50 bg-black/40">
+      <div class="bg-white w-full h-full p-0 md:p-0 overflow-auto">
+        <!-- Blue header with Auto Prudente logo -->
+        <div class="w-full" style="background: var(--brand-header);">
+          <div class="mx-auto max-w-6xl px-4 py-1 flex items-center">
+            <img src="/static/ap-heather.png" alt="Auto Prudente" class="h-10 w-auto" />
+          </div>
+        </div>
+        <div class="px-5 md:px-8">
+          <div class="loading-title text-base font-medium text-gray-800 loading-gap">Pesquisando em mais de 1000 locadoras<span class="dots"></span></div>
+          <div class="mx-auto" style="max-width: 520px;">
+            <div id="movingScene" class="scene" style="margin-bottom: 0px;">
+            <!-- Inline SVG landscape (mountains, clouds, trees) with transparent background -->
+            <svg class="scene-fallback" viewBox="0 0 600 540" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+              <!-- Background image removed for a clean transparent scene -->
+            </svg>
+            <svg class="car-vehicle" width="312" height="132" viewBox="0 0 260 110" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="carBody" x1="0" x2="1" y1="0" y2="0">
+                  <stop offset="0%" stop-color="#ffb454"/>
+                  <stop offset="100%" stop-color="#ff8a3d"/>
+                </linearGradient>
+              </defs>
+              <g transform="scale(-1,1) translate(-260,0)">
+                <rect x="20" y="84" width="220" height="6" rx="3" style="fill:var(--brand-yellow)"/>
+                <g>
+                  <path d="M48 75 h140 a12 12 0 0 0 12-12 v-10 c0-7-6-13-13-15 l-36-10 a28 28 0 0 0-7-1 h-34 a22 22 0 0 0-14 6 l-18 18 h-18 a12 12 0 0 0-12 12 v7 a6 6 0 0 0 6 6z" style="fill:var(--brand-teal)"/>
+                  <rect x="108" y="40" width="36" height="16" rx="3" fill="#CFEFFF"/>
+                </g>
+                <g>
+                  <g class="wheel">
+                    <circle cx="92" cy="75" r="12" fill="#1f2937"/>
+                    <circle cx="92" cy="75" r="4" fill="#9CA3AF"/>
+                    <g class="wheel-rotor">
+                      <circle cx="92" cy="75" r="0.01" fill="none" stroke="none"/>
+                      <rect x="91.5" y="63" width="1" height="6" fill="#fff"/>
+                      <rect x="91.5" y="81" width="1" height="6" fill="#fff"/>
+                      <rect x="80" y="74.5" width="6" height="1" fill="#fff"/>
+                      <rect x="98" y="74.5" width="6" height="1" fill="#fff"/>
+                    </g>
+                  </g>
+                  <g class="wheel">
+                    <circle cx="178" cy="75" r="12" fill="#1f2937"/>
+                    <circle cx="178" cy="75" r="4" fill="#9CA3AF"/>
+                    <g class="wheel-rotor">
+                      <circle cx="178" cy="75" r="0.01" fill="none" stroke="none"/>
+                      <rect x="177.5" y="63" width="1" height="6" fill="#fff"/>
+                      <rect x="177.5" y="81" width="1" height="6" fill="#fff"/>
+                      <rect x="166" y="74.5" width="6" height="1" fill="#fff"/>
+                      <rect x="184" y="74.5" width="6" height="1" fill="#fff"/>
+                    </g>
+                  </g>
+                </g>
+              </g>
+            </svg>
+          </div>
+        </div>
+          <div class="progress my-3" style="width:100%; max-width:520px; margin-left:auto; margin-right:auto;"><div class="bar"></div></div>
+          <!-- Benefits list centered between progress bar and logos -->
+          <div class="mt-2 flex justify-center">
+            <ul class="list-none space-y-1 text-sm text-gray-800 m-0 p-0">
+              <li class="flex items-start gap-2">
+                <svg class="mt-0.5 h-4 w-4 text-green-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0L3.293 9.957a1 1 0 111.414-1.414l3.004 3.004 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                <span>O melhor preço garantido</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <svg class="mt-0.5 h-4 w-4 text-green-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0L3.293 9.957a1 1 0 111.414-1.414l3.004 3.004 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                <span>Rápido e fácil</span>
+              </li>
+              <li class="flex items-start gap-2">
+                <svg class="mt-0.5 h-4 w-4 text-green-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-7.25 7.25a1 1 0 01-1.414 0L3.293 9.957a1 1 0 111.414-1.414l3.004 3.004 6.543-6.543a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>
+                <span>Mais de <strong>7,9 milhões</strong> de clientes</span>
+              </li>
+            </ul>
+          </div>
+          <div class="border-t border-gray-200 my-3"></div>
+          <!-- Suppliers logos: two centered rows, 4 per row -->
+          <div class="mx-auto" style="max-width: 520px;">
+            <div class="logos-grid-4">
+              <div class="logo-badge"><img src="/static/logos/logo_AUP.png" alt="AUP"/></div>
+              <div class="logo-badge"><img src="/static/logos/logo_THR.png.avif" alt="THR"/></div>
+              <div class="logo-badge"><img src="/static/logos/logo_ECR.png.avif" alt="ECR"/></div>
+              <div class="logo-badge"><img src="/static/logos/logo_HER.png" alt="HER"/></div>
+            </div>
+            <div class="logos-grid-4" style="margin-top: 8px;">
+              <div class="logo-badge"><img src="/static/logos/logo_BGX.png.avif" alt="BGX"/></div>
+              <div class="logo-badge"><img src="/static/logos/logo_CEN.png.avif" alt="CEN"/></div>
+              <div class="logo-badge"><img src="/static/logos/logo_OKR.png" alt="OKR"/></div>
+              <div class="logo-badge"><img src="/static/logos/logo_SUR.png" alt="SUR"/></div>
+            </div>
+            <div class="logos-grid-4" style="margin-top: 8px;">
+              <div class="logo-badge"><img src="/static/logos/logo_TAN.png" alt="TAN"/></div>
+              <div class="logo-badge"><img src="/static/logos/logo_TAN1.png" alt="TAN1"/></div>
+              <div class="logo-badge"><img src="/static/logos/logo_YNO.png.avif" alt="YNO"/></div>
+              <div class="logo-badge"><img src="/static/logos/logo_ICT.png" alt="ICT"/></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      console.log('[INIT] Versão: v2025-01-28-10-00');
+      
+      // Register service worker for PWA (guarded)
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          try { navigator.serviceWorker.register('/static/sw.js'); } catch(_){ }
+        });
+      }
+      // A2HS hint (guarded)
+      let deferredPrompt;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        try {
+          e.preventDefault(); deferredPrompt = e;
+          const bar = document.createElement('div');
+          bar.className = 'fixed bottom-3 left-1/2 -translate-x-1/2 bg-white border shadow rounded px-3 py-2 text-sm flex items-center gap-2';
+          bar.innerHTML = '<span>Adicionar ao ecrã inicial?</span> <button class="px-2 py-1 bg-[#009cb6] text-white rounded">Instalar</button>';
+          document.body.appendChild(bar);
+          bar.querySelector('button').addEventListener('click', async () => { try { await deferredPrompt.prompt(); } catch(_){} bar.remove(); });
+        } catch(_){}
+      });
+    </script>
+    <script>
+      // Track-by-Date was removed; no rerender of date-based blocks
+
+      // Cache global para resultados de todos os dias
+      let cachedResults = {}; // Formato: { "location-date-days": { items: [...], ... } }
+      
+      // Limpar cache quando localização muda
+      document.addEventListener('DOMContentLoaded', () => {
+        const locEl = document.getElementById('location');
+        if (locEl) {
+          locEl.addEventListener('change', () => {
+            console.log('[CACHE] Localização mudou, limpando cache...');
+            cachedResults = {};
+            // Limpar resultados exibidos
+            const resultsEl = document.getElementById('results');
+            if (resultsEl) resultsEl.innerHTML = '';
+            // Re-renderizar chips sem checkmarks
+            try {
+              const daysInput = document.getElementById('days');
+              const chipsCont = document.getElementById('daysChips');
+              if (daysInput && chipsCont) {
+                const presets = [1,2,3,4,5,6,7,8,9,14,22,31,60];
+                const onChange = (d) => {
+                  window.selectedDays = d;
+                  daysInput.value = String(d);
+                  daysInput.dispatchEvent(new Event('input', { bubbles: true }));
+                  renderChips('daysChips', presets, onChange);
+                };
+                renderChips('daysChips', presets, onChange);
+              }
+            } catch(_) {}
+          });
+        }
+      });
+      
+      function getCacheKey(location, date, days) {
+        return `${location}-${date}-${days}`;
+      }
+
+      // Date helpers
+      function fmtDate(d){ const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${d.getFullYear()}-${m}-${day}`; }
+      function toDate(v){ const d=new Date(v); return isNaN(d.getTime())?null:d; }
+      function setupDateMath(){
+        // In this UX, the visible date ('startDate') is DELIVERY date.
+        // We compute PICKUP date = DELIVERY - days, and store it in hidden 'endDate'.
+        const deliveryEl = document.getElementById('startDate');
+        const pickupHiddenEl = document.getElementById('endDate');
+        const daysEl = document.getElementById('days');
+        if (!deliveryEl || !pickupHiddenEl || !daysEl) return;
+        function recompute(){
+          const n = parseInt(daysEl.value||'0',10);
+          const delivery = toDate(deliveryEl.value); if(!delivery||!n) return;
+          const pickup = new Date(delivery); pickup.setDate(pickup.getDate()-n);
+          pickupHiddenEl.value = fmtDate(pickup);
+        }
+        ['input','change'].forEach(ev=>{ deliveryEl.addEventListener(ev, recompute); daysEl.addEventListener(ev, recompute); });
+        deliveryEl.addEventListener('change', ()=>{ try{ deliveryEl.blur(); }catch(_){ } recompute(); });
+        recompute();
+      }
+      // Initialize date math and days selector once DOM is ready
+      setupDateMath();
+      // Variável global para selectedDays
+      window.selectedDays = 7;
+      
+      function setupDaysSelector(){
+        try {
+          const daysInput = document.getElementById('days');
+          const chipsCont = document.getElementById('daysChips');
+          if (!daysInput || !chipsCont) return;
+          const presets = [1,2,3,4,5,6,7,8,9,14,22,31,60];
+          window.selectedDays = parseInt(daysInput.value || '7', 10) || 7;
+          function onChange(d){
+            window.selectedDays = d;
+            daysInput.value = String(d);
+            try { daysInput.dispatchEvent(new Event('input', { bubbles: true })); } catch(_){ }
+            renderChips('daysChips', presets, onChange);
+          }
+          renderChips('daysChips', presets, onChange);
+        } catch(_) { }
+      }
+      setupDaysSelector();
+
+      function groupByTransmission(items) {
+        const g = { Automatic: [], Manual: [], Other: [] };
+        (items || []).forEach((it) => {
+          const t = (it.transmission || '').toLowerCase();
+          if (t === 'automatic') g.Automatic.push(it);
+          else if (t === 'manual') g.Manual.push(it);
+          else g.Other.push(it);
+        });
+        return g;
+      }
+
+      function groupByCategory(items) {
+        // Desired order with code labels
+        const groups = [
+          { cat: 'Mini 4 Doors', label: 'B1 - Mini 4 Doors' },
+          { cat: 'Mini', label: 'B2 - Mini 5 Doors' },
+          { cat: 'Economy', label: 'D - Economy' },
+          { cat: 'Mini Automatic', label: 'E1 - Mini Automatic' },
+          { cat: 'Economy Automatic', label: 'E2 – Economy Automatic' },
+          { cat: 'SUV', label: 'F – SUV' },
+          { cat: 'Premium', label: 'G - Premium' },
+          { cat: 'Crossover', label: 'J1 – Crossover' },
+          { cat: 'Estate/Station Wagon', label: 'J2 – Station Wagon' },
+          { cat: 'SUV Automatic', label: 'L1 - SUV Automatic' },
+          { cat: 'Station Wagon Automatic', label: 'L2 - Station Wagon Automatic' },
+          { cat: '7 Seater', label: 'M1 - 7 Seater' },
+          { cat: '7 Seater Automatic', label: 'M2 - 7 Seater Automatic' },
+          { cat: '9 Seater', label: 'N - 9 Seater' },
+        ];
+        const codeToCat = {
+          'B1': 'Mini 4 Doors',
+          'B2': 'Mini',
+          'D': 'Economy',
+          'E1': 'Mini Automatic',
+          'E2': 'Economy Automatic',
+          'F': 'SUV',
+          'G': 'Premium',
+          'J1': 'Crossover',
+          'J2': 'Estate/Station Wagon',
+          'L1': 'SUV Automatic',
+          'L2': 'Station Wagon Automatic',
+          'M1': '7 Seater',
+          'M2': '7 Seater Automatic',
+          'N': '9 Seater',
+        };
+        const normalizeCat = (raw) => {
+          const s = String(raw || '').trim();
+          if (!s) return '';
+          // Exact canonical
+          const canon = groups.map(g => g.cat);
+          if (canon.includes(s)) return s;
+          const low = s.toLowerCase();
+          // Map common variants/synonyms into canonical buckets
+          if (/^mini\b.*4\b.*door/.test(low)) return 'Mini 4 Doors';
+          if (/^mini\b(?!.*4\b.*door)/.test(low)) return 'Mini';
+          if (/^econom(y|ic)/.test(low)) return /auto/.test(low) ? 'Economy Automatic' : 'Economy';
+          if (/^premium|^luxury/.test(low)) return 'Premium';
+          if (/^(suv|jeep)\b/.test(low)) return /auto/.test(low) ? 'SUV Automatic' : 'SUV';
+          if (/^(crossover)\b/.test(low)) return 'Crossover';
+          if (/(estate|station\s*wagon|\bst\b|\bsw\b|touring\s*sports|sport\s*tourer)/.test(low)) return /auto/.test(low) ? 'Station Wagon Automatic' : 'Estate/Station Wagon';
+          if (/7\s*seater/.test(low)) return /auto/.test(low) ? '7 Seater Automatic' : '7 Seater';
+          if (/9\s*seater/.test(low)) return '9 Seater';
+          if (/mini\s*automatic/.test(low)) return 'Mini Automatic';
+          if (/economy\s*automatic/.test(low)) return 'Economy Automatic';
+          if (/suv\s*automatic/.test(low)) return 'SUV Automatic';
+          if (/(station\s*wagon|estate).*automatic/.test(low)) return 'Station Wagon Automatic';
+          return s; // fallback to raw
+        };
+        const map = new Map();
+        (items || []).forEach(it => {
+          const disp = String(displayCategory(it) || '').trim();
+          let key = '';
+          const m = disp.match(/^group\s*([A-Z0-9]+)\b/i);
+          if (m) {
+            const code = m[1].toUpperCase();
+            key = codeToCat[code] || normalizeCat(it.category);
+          } else {
+            key = normalizeCat(disp) || normalizeCat(it.category);
+          }
+          if (!key) return;
+          if (!map.has(key)) map.set(key, []);
+          map.get(key).push(it);
+        });
+        return { groups, map };
+      }
+
+      function renderCategoryBlocks(items) {
+        const { groups, map } = groupByCategory(items);
+        const parts = [];
+        const usedCats = new Set();
+        let gi = 0;
+        const toNum = (p) => {
+          if (typeof p === 'number' && isFinite(p)) return p;
+          const s = String(p || '').replace(/\s|\u00a0/g, '');
+          // Normalize common euro formats: "€1.234,56" or "1,234.56€"
+          const m = s.match(/([0-9.,]+)/);
+          if (!m) return Number.POSITIVE_INFINITY;
+          let num = m[1];
+          const hasComma = num.includes(',');
+          const hasDot = num.includes('.');
+          if (hasComma && hasDot) {
+            // assume dot thousands, comma decimals
+            num = num.replace(/\./g, '').replace(/,/g, '.');
+          } else if (hasComma && !hasDot) {
+            // assume comma decimals
+            num = num.replace(/,/g, '.');
+          } else {
+            // only dots -> already decimals or thousands; remove thousands
+            const parts = num.split('.');
+            if (parts.length > 2) num = parts.join('');
+          }
+          const v = parseFloat(num);
+          return isFinite(v) ? v : Number.POSITIVE_INFINITY;
+        };
+        // Determine which category has the overall lowest price
+        let bestCat = '';
+        let bestVal = Number.POSITIVE_INFINITY;
+        map.forEach((lst, cat) => {
+          const m = (lst || []).reduce((acc, it) => {
+            const v = toNum(it.price);
+            return v < acc ? v : acc;
+          }, Number.POSITIVE_INFINITY);
+          if (isFinite(m) && m < bestVal) { bestVal = m; bestCat = cat; }
+        });
+        groups.forEach(g => {
+          const lst = (map.get(g.cat) || []).slice().sort((a,b) => {
+            const an = toNum(a.price);
+            const bn = toNum(b.price);
+            return an - bn;
+          });
+          if (!lst.length) return;
+          usedCats.add(g.cat);
+          const secId = `group_sec_${gi}`;
+          const expanded = gi === 0; // only first group open by default
+          gi++;
+          parts.push(`<div class="mt-3 px-4 py-2 text-xs font-semibold rounded text-white cursor-pointer group-title flex items-center justify-between" onclick="toggleSection('${secId}')"><span>${escapeHtml(g.label)}</span>${(bestCat===g.cat)?'<span class="lowest-badge">Preço mais baixo</span>':''}</div>`);
+          parts.push(`<div id="${secId}" data-accordion="group" class="${expanded ? '' : 'hidden'} accordion-content">${renderTableForItems(lst)}</div>`);
+        });
+        // Render any categories not in default order at the end
+        map.forEach((lst, cat) => {
+          if (usedCats.has(cat)) return;
+          if (!lst.length) return;
+          const sorted = lst.slice().sort((a,b) => toNum(a.price) - toNum(b.price));
+          const secId2 = `group_sec_${gi}`;
+          gi++;
+          parts.push(`<div class="mt-3 px-4 py-2 text-xs font-semibold rounded text-white cursor-pointer group-title flex items-center justify-between" onclick="toggleSection('${secId2}')"><span>${escapeHtml(cat)}</span>${(bestCat===cat)?'<span class=\"lowest-badge\">Preço mais baixo</span>':''}</div>`);
+          parts.push(`<div id="${secId2}" data-accordion="group" class="hidden accordion-content">${renderTableForItems(sorted)}</div>`);
+        });
+        // Add an 'Other' group for items that didn't match any bucket
+        try {
+          const included = new Set();
+          map.forEach(lst => lst.forEach(it => included.add(it)));
+          const leftovers = (items || []).filter(it => !included.has(it));
+          if (leftovers.length) {
+            const sorted = leftovers.slice().sort((a,b) => toNum(a.price) - toNum(b.price));
+            const secId3 = `group_sec_${gi}`;
+            gi++;
+            parts.push(`<div class="mt-3 px-4 py-2 text-xs font-semibold rounded text-white cursor-pointer group-title" onclick="toggleSection('${secId3}')">Other</div>`);
+            parts.push(`<div id="${secId3}" data-accordion="group" class="hidden accordion-content">${renderTableForItems(sorted)}</div>`);
+          }
+        } catch (_) { /* no-op */ }
+        return parts.join('');
+      }
+
+      function toggleSection(id) {
+        try {
+          const el = document.getElementById(id);
+          if (!el) return;
+          const isHidden = el.classList.contains('hidden');
+          // Close siblings in the same accordion group when opening
+          if (isHidden) {
+            const container = el.parentElement;
+            if (container) {
+              const peers = container.querySelectorAll('[data-accordion="group"]');
+              peers.forEach(p => { if (p !== el) p.classList.add('hidden'); });
+            }
+            el.classList.remove('hidden');
+          } else {
+            el.classList.add('hidden');
+          }
+        } catch (_) { /* no-op */ }
+      }
+
+      function imageUrlFor(it) {
+        const car = String(it.car || '').trim();
+        const supplier = String(it.supplier || '').trim();
+        // Supplier-specific overrides first
+        if (/auto\s*prudente\s*rent\s*a\s*car/i.test(supplier)) {
+          if (/(^citroen\s*c4\s*picasso\s*auto|^citroën\s*c4\s*picasso\s*auto)/i.test(car)) {
+            return 'https://www.carjet.com/cdn/img/cars/M/car_A219.jpg';
+          }
+        }
+        // Specific mappings provided by user
+        if (/^fiat\s*500\s*cabrio/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_L154.jpg';
+        if (/^fiat\s*500x(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A112.jpg';
+        if (/^fiat\s*500(?!\s*[xXlL])(?!.*cabrio)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C25.jpg';
+        if (/^renault\s*clio/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C04.jpg';
+        if (/^toyota\s*aygo(?!\s*x)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C29.jpg';
+        if (/(^citroen\s*c1|^citroën\s*c1)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C96.jpg';
+        if (/^toyota\s*yaris/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C64.jpg';
+        if (/^(vw|volkswagen)\s*golf/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F12.jpg';
+        if (/^audi\s*a1/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C42.jpg';
+        if (/^ford\s*focus/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F02.jpg';
+        if (/(^renault\s*megane|^renault\s*mégane)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F05.jpg';
+        if (/^peugeot\s*308/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F22.jpg';
+        if (/^volkswagen\s*up/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C66.jpg';
+        if (/^fiat\s*panda/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C30.jpg';
+        if (/^peugeot\s*208/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C60.jpg';
+        if (/^ford\s*ka/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_N07.jpg';
+        if (/^(vw|volkswagen)\s*polo/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C27.jpg';
+        if (/^hyundai\s*i10/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C32.jpg';
+        if (/^hyundai\s*i30/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C41.jpg';
+        if (/^hyundai\s*i20/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C52.jpg';
+        if (/^kia\s*picanto/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C59.jpg';
+        if (/^opel\s*adam/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C50.jpg';
+        if (/(^mitsubishi\s*space\s*star|^mitsubishi\s*spacestar)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C190.jpg';
+        if (/^nissan\s*micra/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C13.jpg';
+        if (/^kia\s*ceed(\s*auto)?/i.test(car)) return (/auto/i.test(car) ? 'https://www.carjet.com/cdn/img/cars/M/car_A1023.jpg' : 'https://www.carjet.com/cdn/img/cars/M/car_C21.jpg');
+        if (/^ford\s*fiesta/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C17.jpg';
+        if (/^nissan\s*juke/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F29.jpg';
+        if (/^peugeot\s*108/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C15.jpg';
+        if (/^seat\s*ibiza(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C01.jpg';
+        if (/(^citroen\s*c3|^citroën\s*c3)(?!\s*aircross)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C06.jpg';
+        if (/^ford\s*kuga/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F41.jpg';
+        if (/^renault\s*twingo/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C61.jpg';
+        if (/^peugeot\s*108\s*cabrio/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_L41.jpg';
+        if (/^(vw|volkswagen)\s*t-?cross/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F252.jpg';
+        if (/(^citroen\s*c4|^citroën\s*c4)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A17.jpg';
+        if (/^peugeot\s*3008(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A132.jpg';
+        if (/^opel\s*astra\b(?!.*\bsw\b)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F73.jpg';
+        if (/^opel\s*astra\s*sw/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_S10.jpg';
+        if (/^toyota\s*aygo\s*x/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F408.jpg';
+        if (/^kia\s*stonic/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F119.jpg';
+        if (/(^citroen\s*c3\s*aircross|^citroën\s*c3\s*aircross)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A782.jpg';
+        if (/^jeep\s*avenger/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_L164.jpg';
+        if (/^(vw|volkswagen)\s*taigo/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F352.jpg';
+        if (/^renault\s*captur/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F44.jpg';
+        if (/^hyundai\s*(kauai|kaua[ií])/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F44.jpg';
+        if (/^mitsubishi\s*asx/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F178.jpg';
+        if (/^hyundai\s*kona/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F191.jpg';
+        if (/^toyota\s*c-?hr(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A301.jpg';
+        if (/^ford\s*(eco\s*sport|ecosport)(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A606.jpg';
+        if (/^opel\s*crossland\s*x(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A444.jpg';
+        if (/^(vw|volkswagen)\s*tiguan(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A830.jpg';
+        if (/^skoda\s*karoq(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A822.jpg';
+        if (/^cupra\s*leon\s*(sw|st|estate|sport[-\s]*tourer)(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1426.jpg';
+        if (/^toyota\s*corolla\s*(sw|touring\s*sports|estate)(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A590.jpg';
+        if (/^dacia\s*lodgy\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M117.jpg';
+        if (/^opel\s*zafira\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M05.jpg';
+        if (/^ford\s*tourneo\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M44.jpg';
+        if (/^(vw|volkswagen)\s*sharan\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M56.jpg';
+        if (/^(vw|volkswagen)\s*multivan(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A406.jpg';
+        if (/^renault\s*grand\s*scenic(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M15.jpg';
+        if (/(^citroen|^citroën)\s*(c4\s*)?grand\s*picasso(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A219.jpg';
+        if (/^mercedes\s*glb(\b.*)?(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_GZ399.jpg';
+        if (/^(vw|volkswagen)\s*caddy(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A295.jpg';
+        if (/(^citroen|^citroën)\s*c5\s*aircross(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A640.jpg';
+        if (/^ds\s*4(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1637.jpg';
+        if (/^cupra\s*formentor(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1185.jpg';
+        if (/^jeep\s*renegade(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A222.jpg';
+        if (/^renault\s*arkana(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1159.jpg';
+        if (/^toyota\s*rav\s*?4(\s*4x4)?(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1000.jpg';
+        if (/^peugeot\s*2008/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F91.jpg';
+        if (/^kia\s*sportage/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F43.jpg';
+        if (/^nissan\s*qashqai/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F24.jpg';
+        if (/^skoda\s*kamiq/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F310.jpg';
+        if (/^hyundai\s*tucson/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F310.jpg';
+        if (/^renault\s*austral/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F430.jpg';
+        if (/^seat\s*ateca/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F154.jpg';
+        if (/^peugeot\s*5008/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M27.jpg';
+        if (/^toyota\s*hilux(\s*4x4)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F326.jpg';
+        if (/^peugeot\s*308\s*sw(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_S06.jpg';
+        if (/^opel\s*corsa(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A03.jpg';
+        if (/^dacia\s*jogger/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M162.jpg';
+        if (/^seat\s*(leon|león)\b(?!.*\b(sw|st|estate|sport[-\s]*tourer)\b).*$/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F39.jpg';
+        if (/^toyota\s*corolla\s*auto/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A623.jpg';
+        if (/(^mini|^miny)\s*(cooper\s*)?countryman(\s*(auto|automatic))?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F209.jpg';
+        if (/^ford\s*puma(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A999.jpg';
+        if (/^fiat\s*talento/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M49.jpg';
+        if (/^peugeot\s*rifter(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M124.jpg';
+        if (/(^citroen\s*c4\s*grand\s*spacetourer|^citroën\s*c4\s*grand\s*spacetourer)(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1430.jpg';
+        if (/^opel\s*vivaro/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M34.jpg';
+        if (/^seat\s*arona(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F194.jpg';
+        if (/^toyota\s*proace/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M136.jpg';
+        if (/(^citroen\s*c4\s*picasso\s*auto|^citroën\s*c4\s*picasso\s*auto)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A522.jpg';
+        if (/^ford\s*transit/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M02.jpg';
+        if (/^ford\s*galaxy/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M03.jpg';
+        if (/(^citroen\s*spacetourer|^citroën\s*spacetourer)(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A261.jpg';
+        if (/^renault\s*trafic(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A581.jpg';
+        if (/^peugeot\s*traveller\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M86.jpg';
+        if (/^(vw|volkswagen)\s*transporter\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M08.jpg';
+        if (/^mercedes(\s*benz)?\s*vito(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A230.jpg';
+        if (/^(vw|volkswagen)\s*caravelle\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_M63.jpg';
+        if (/^mercedes(\s*benz)?\s*v\s*class(\s*auto)?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_A1336.jpg';
+        if (/(^citroen\s*c4\s*cactus|^citroën\s*c4\s*cactus)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C51.jpg';
+        if (/^renault\s*clio\s*sw/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C54.jpg';
+        if (/(^mazda\s*cx[- ]?3)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F179.jpg';
+        if (/^skoda\s*octavia\b(\s*(sw|combi|estate))?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_I12.jpg';
+        if (/^skoda\s*fabia\b\s*(sw|combi|estate)\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_S34.jpg';
+        if (/^(vw|volkswagen)\s*passat\b(\s*(variant|estate|sw))?/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_I11.jpg';
+        if (/^fiat\s*tipo\b\s*(sw|estate)\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F72.jpg';
+        if (/^peugeot\s*508\b/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F65.jpg';
+        if (/^seat\s*leon\s*(sw|st|estate|sport[-\s]*tourer)/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_F46.jpg';
+        if (/^(vw|volkswagen)\s*beetle\s*cabrio/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_L44.jpg';
+        if (/^(mini|miny)\s*(cooper|one)\s*cabrio/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_L118.jpg';
+        if (/^skoda\s*scala/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C166.jpg';
+        if (/^fiat\s*500l/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C43.jpg';
+        if (/dacia\s*sandero/i.test(car)) return 'https://www.carjet.com/cdn/img/cars/M/car_C75.jpg';
+        return it.photo || '';
+      }
+
+      function imgTagFor(it, kind) {
+        const mapped = (typeof imageUrlFor === 'function') ? imageUrlFor(it) : '';
+        const src = mapped || (it && it.image_url) || `/ph?car=${encodeURIComponent((it && it.car) || 'Car')}`;
+        const alt = (it && it.car) || 'Car';
+        if (kind === 'table') {
+          return `<img src="${src}" alt="${escapeHtml(alt)}" class="h-10 w-auto"/>`;
+        }
+        return `<img src="${src}" alt="${escapeHtml(alt)}" class="h-14 w-auto"/>`;
+      }
+
+      function displaySupplierName(name) {
+        const s = String(name || '').trim();
+        if (!s) return '';
+        const up = s.toUpperCase().replace(/\s+/g, ' ').trim();
+        // Known code → name mappings (extendable)
+        const codeMap = {
+          AUP: 'Auto Prudente Rent a Car',
+          THR: 'Thrifty',
+          ECR: 'Europcar',
+          HER: 'Hertz',
+          CEN: 'Centauro',
+          OKR: 'OK Mobility',
+          SUR: 'Surprice',
+          TAN: 'TAN',
+          TAN1: 'TAN',
+          YNO: 'YNO',
+          ICT: 'Interrent',
+        };
+        // Direct code or code embedded in text
+        const m = up.match(/\b(AUP|THR|ECR|HER|CEN|OKR|SUR|TAN1?|YNO|ICT)\b/);
+        if (m && codeMap[m[1]]) return codeMap[m[1]];
+        // Normalize common textual variants
+        if (/^AUTO\s*PRUDENTE\b/.test(up)) return 'Auto Prudente Rent a Car';
+        if (/^OK\s*(RENT|MOBILITY)\b/.test(up)) return 'OK Mobility';
+        if (/^CENTAURO\b/.test(up)) return 'Centauro';
+        if (/^EUROPCAR\b/.test(up)) return 'Europcar';
+        if (/^HERTZ\b/.test(up)) return 'Hertz';
+        if (/^THRIFTY\b/.test(up)) return 'Thrifty';
+        if (/^SURPRICE\b/.test(up)) return 'Surprice';
+        // Fallback to original
+        return s;
+      }
+
+      function displayCategory(it) {
+        const car = String(it.car || '').toLowerCase();
+        const cat = String(it.category || '').toLowerCase();
+        const transmission = String(it.transmission || it.gearbox || it.gear || it.trans || it.gear_type || it.shift || '').toLowerCase();
+        const details = String(it.details || '').toLowerCase();
+        // Specific overrides first
+        if (/^peugeot\s*308\b.*\bauto(matic)?\b/.test(car)) return 'Group E2';
+        if (/^fiat\s*500l\b/.test(car)) return 'Group J1';
+        if (/\bkia\s*ceed\b/.test(car)) return 'Group D';
+        if (/(^mini|^miny)\s*(cooper\s*)?countryman\b/.test(car)) return 'Group G';
+        if (/^(vw|volkswagen)\s*caddy\b.*\bauto(matic)?\b/.test(car)) return 'Group M2';
+        if (/^peugeot\s*rifter\b/.test(car)) return 'Group M1';
+        if (/(^citroen|^citroën)\s*c1\b.*\bauto(matic)?\b/.test(car)) return 'Group E1';
+        // Citroen C3 Aircross: Automatic -> L1 (SUV Automatic); else -> J1 (Crossover)
+        if (/(^citroen|^citroën)\s*c3\s*aircross\b/.test(car)) {
+          const isAutoC3 = ( /\bauto(matic|\.)?\b/.test(car) || /\bauto(matic|\.)?\b/.test(cat) || /\bauto(matic|\.)?\b/.test(transmission) || /\bauto(matic|\.)?\b/.test(details)
+            || /(automático|automatica|automatico|automatik)/i.test(car+" "+cat+" "+transmission+" "+details)
+            || /\bA\/?T\b/i.test(car+" "+cat+" "+transmission+" "+details) );
+          return isAutoC3 ? 'Group L1' : 'Group J1';
+        }
+        // Peugeot 5008 is a 7 seater -> Group M1
+        if (/^peugeot\s*5008\b/.test(car)) return 'Group M1';
+        // Fiat 500X: manual -> J1 (Crossover), automatic -> L1 (SUV Automatic)
+        if (/^fiat\s*500x\b/.test(car)) {
+          const isAuto500x = ( /\bauto(matic|\.)?\b/.test(car) || /\bauto(matic|\.)?\b/.test(cat) || /\bauto(matic|\.)?\b/.test(transmission) || /\bauto(matic|\.)?\b/.test(details)
+            || /(automático|automatica|automatico|automatik)/i.test(car+" "+cat+" "+transmission+" "+details)
+            || /\bA\/?T\b/i.test(car+" "+cat+" "+transmission+" "+details) );
+          return isAuto500x ? 'Group L1' : 'Group J1';
+        }
+        // VW T-Cross: manual -> J1 (Crossover), automatic -> L1 (SUV Automatic)
+        if (/^(vw|volkswagen)\s*t\s*-?\s*cross\b/.test(car)) {
+          const isAutoTCross = ( /\bauto(matic|\.)?\b/.test(car) || /\bauto(matic|\.)?\b/.test(cat) || /\bauto(matic|\.)?\b/.test(transmission) || /\bauto(matic|\.)?\b/.test(details)
+            || /(automático|automatica|automatico|automatik)/i.test(car+" "+cat+" "+transmission+" "+details)
+            || /\bA\/?T\b/i.test(car+" "+cat+" "+transmission+" "+details) );
+          return isAutoTCross ? 'Group L1' : 'Group J1';
+        }
+        // Peugeot 308 SW Automatic -> Station Wagon Automatic (L2)
+        if (/^peugeot\s*308\s*sw\b/.test(car) && (
+            /\bauto(matic|\.)?\b/.test(car) || /\bauto(matic|\.)?\b/.test(cat) || /\bauto(matic|\.)?\b/.test(transmission) || /\bauto(matic|\.)?\b/.test(details)
+            || /(automático|automatica|automatico|automatik)/i.test(car+" "+cat+" "+transmission+" "+details)
+            || /\bA\/?T\b/i.test(car+" "+cat+" "+transmission+" "+details)
+          )) return 'Group L2';
+        // Generic rules
+        const auto = (
+          /\bauto(matic|\.)?\b/.test(car) || /\bauto(matic|\.)?\b/.test(cat) || /\bauto(matic|\.)?\b/.test(transmission) || /\bauto(matic|\.)?\b/.test(details)
+          || /(automático|automatica|automatico|automatik)/i.test(car+" "+cat+" "+transmission+" "+details)
+          || /\bA\/?T\b/i.test(car+" "+cat+" "+transmission+" "+details)
+        );
+        const isL1Model = (
+          (/\bcrossland\s*x\b/.test(car)) ||
+          (/\beco\s*sport\b/.test(car) || /\becosport\b/.test(car)) ||
+          (/\barona\b/.test(car)) ||
+          (/(^|\b)(vw|volkswagen)\s*taigo\b/.test(car) || /\btaigo\b/.test(car)) ||
+          (/\bjuke\b/.test(car)) ||
+          (/\bstonic\b/.test(car))
+        );
+        if (auto && isL1Model) return 'Group L1';
+        return it.category || '';
+      }
+
+      function renderCardsForItems(items) {
+        return `
+          <div class="grid grid-cols-1 gap-3">
+            ${(items || []).map((it, idx) => `
+              <div class="rounded-md border bg-white ${(/auto prudente/i.test(it.supplier||'')) ? 'auto-prudente' : ''}" style="${(/auto prudente/i.test(it.supplier||'')) ? 'background-color: var(--brand-teal-20);' : ''}">
+                <div class="flex items-center gap-3 p-3">
+                  ${imgTagFor(it, 'card')}
+                  <div class="min-w-0 flex-1">
+                    <div class="text-xs text-gray-500">${escapeHtml(displaySupplierName(it.supplier))}</div>
+                    <div class="text-sm font-medium text-gray-900 truncate">${escapeHtml(it.car || '-')}</div>
+                    <div class="text-xs text-gray-600">${escapeHtml(displayCategory(it))}</div>
+                  </div>
+                  <div class="text-right">
+                    <div class="text-sm font-semibold text-gray-900">${escapeHtml(it.price || '')}</div>
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>`;
+      }
+
+      function renderTableForItems(items) {
+        return `
+          <div>
+            <div class="hidden md:block overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-[#009cb6]">
+                  <tr>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-white uppercase">#</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-white uppercase">Photo</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-white uppercase">Supplier</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-white uppercase">Car</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-white uppercase">Category</th>
+                    <th class="px-4 py-2 text-left text-xs font-medium text-white uppercase">Total Price</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200 bg-white">
+                  ${(items || []).map((it, idx) => `
+                    <tr class="${(/auto prudente/i.test(it.supplier||'')) ? '' : ''}" style="${(/auto prudente/i.test(it.supplier||'')) ? 'background-color: var(--brand-teal-20);' : ''}">
+                      <td class="px-4 py-2 text-sm text-gray-600">${idx + 1}</td>
+                      <td class="px-4 py-2 text-sm">
+                        ${imgTagFor(it, 'table')}
+                      </td>
+                      <td class="px-4 py-2 text-sm">${escapeHtml(displaySupplierName(it.supplier))}</td>
+                      <td class="px-4 py-2 text-sm">${escapeHtml(it.car || '-')}</td>
+                      <td class="px-4 py-2 text-sm">${escapeHtml(displayCategory(it))}</td>
+                      <td class="px-4 py-2 text-sm font-medium">${escapeHtml(it.price || '')}</td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+            <div class="block md:hidden">${renderCardsForItems(items)}</div>
+          </div>`;
+      }
+
+      // Track-by-Date removed; renderTrackResults omitted
+
+      function renderChips(containerId, daysList, onChange) {
+        const cont = document.getElementById(containerId);
+        if (!cont) return;
+        cont.classList.remove('hidden');
+        cont.innerHTML = '';
+        
+        // Verificar quais estão em cache
+        const locEl = document.getElementById('location');
+        const sdEl = document.getElementById('startDate');
+        const location = (locEl && locEl.value || '').trim();
+        const delivery_date = sdEl && sdEl.value || '';
+        
+        for (const d of daysList) {
+          const btn = document.createElement('button');
+          const isSelected = d === window.selectedDays;
+          const cacheKey = getCacheKey(location, delivery_date, d);
+          const isCached = location && delivery_date && cachedResults[cacheKey];
+          
+          btn.className = 'px-2.5 py-1 rounded-md border text-xs font-medium transition-colors ' + (isSelected ? 'bg-[#f4ad0f] text-white border-[#f4ad0f]' : (isCached ? 'bg-white text-[#009cb6] border-gray-300 hover:bg-[#f4ad0f]/10' : 'bg-white text-gray-700 border-gray-300 hover:bg-[#f4ad0f]/10'));
+          btn.innerHTML = d + 'd' + (isCached ? (isSelected ? ' <span style="color: #fff; font-weight: 700;">✓</span>' : ' <span style="color: #009cb6; font-weight: 700;">✓</span>') : '');
+          btn.title = isCached ? 'Pré-carregado (instantâneo)' : 'Clique para carregar';
+          btn.addEventListener('click', async (e) => { 
+            e.preventDefault();
+            e.stopPropagation();
+            
+            console.log('[CHIP] Clicado:', d, 'dias');
+            
+            // Atualizar selectedDays e input
+            window.selectedDays = d;
+            const daysInput = document.getElementById('days');
+            if (daysInput) daysInput.value = String(d);
+            
+            // RENDERIZAR DIRETAMENTE DO CACHE
+            const locEl = document.getElementById('location');
+            const sdEl = document.getElementById('startDate');
+            const resultsEl = document.getElementById('results');
+            const loc = (locEl && locEl.value || '').trim();
+            const date = sdEl && sdEl.value || '';
+            const key = getCacheKey(loc, date, d);
+            
+            console.log('[CACHE] Key:', key);
+            console.log('[CACHE] Disponíveis:', Object.keys(cachedResults));
+            
+            if (!cachedResults[key]) {
+              console.log('[CACHE] NÃO existe! Chamando fetch...');
+              await new Promise(r => setTimeout(r, 100));
+              if (window.runBulkFetch) {
+                window.runBulkFetch({ preventDefault: () => {} });
+              }
+              return;
+            }
+            
+            const data = cachedResults[key];
+            const items = Array.isArray(data.items) ? data.items : [];
+            console.log('[CACHE] Encontrado!', items.length, 'items');
+            if (items.length > 0) {
+              console.log('[CACHE] Primeiro carro:', items[0]?.car, 'Preço:', items[0]?.price);
+            }
+            
+            if (!resultsEl) {
+              console.log('[ERROR] Elemento results não encontrado');
+              return;
+            }
+            
+            console.log('[RENDER] Limpando resultados anteriores');
+            resultsEl.innerHTML = '';
+            
+            console.log('[RENDER] Criando seção para', d, 'dias com', items.length, 'items');
+            const section = document.createElement('div');
+            section.className = 'rounded-md border';
+            
+            const html = [];
+            html.push(`<div class="px-4 py-2 bg-gray-50 text-sm font-medium">${d} day(s) — ${escapeHtml(loc)} <span class="text-blue-600 ml-2">⚡ Cache</span></div>`);
+            
+            if (items.length === 0) {
+              html.push(`<div class="px-4 py-3 text-center text-gray-600"><p class="mb-2">⚠️ Nenhum resultado encontrado</p></div>`);
+            } else {
+              console.log('[RENDER] Primeiro carro:', items[0]?.car, 'Preço:', items[0]?.price);
+              console.log('[RENDER] Último carro:', items[items.length-1]?.car, 'Preço:', items[items.length-1]?.price);
+              html.push(`<div class="px-4 py-2 bg-gray-50 text-sm font-medium">Grouped by Category</div>`);
+              html.push(renderCategoryBlocks(items));
+            }
+            
+            section.innerHTML = html.join('');
+            resultsEl.appendChild(section);
+            
+            console.log('[RENDER] Completo! Total de', items.length, 'carros renderizados');
+            console.log('==========================================');
+            
+            // Re-renderizar chips SEM recriar eventos
+            const chipsCont = document.getElementById('daysChips');
+            if (chipsCont) {
+              Array.from(chipsCont.children).forEach((btn, idx) => {
+                const dayValue = daysList[idx];
+                if (dayValue === d) {
+                  btn.className = 'px-2.5 py-1 rounded-md border text-xs font-medium transition-colors bg-[#f4ad0f] text-white border-[#f4ad0f]';
+                } else {
+                  const isCached = cachedResults[getCacheKey(loc, date, dayValue)];
+                  btn.className = 'px-2.5 py-1 rounded-md border text-xs font-medium transition-colors ' + (isCached ? 'bg-white text-[#009cb6] border-gray-300 hover:bg-[#f4ad0f]/10' : 'bg-white text-gray-700 border-gray-300 hover:bg-[#f4ad0f]/10');
+                }
+              });
+            }
+          });
+          cont.appendChild(btn);
+        }
+      }
+      const fetchAllBtn = document.getElementById('fetchAllBtn');
+      function debounce(fn, wait){ let t; return function(...args){ clearTimeout(t); t = setTimeout(() => fn.apply(this, args), wait); }; }
+      let fetchInFlight = false;
+      // Tornar global para poder chamar dos chips
+      window.runBulkFetch = async function runBulkFetch(e){
+        if (e && e.preventDefault) e.preventDefault();
+        if (fetchInFlight) {
+          console.log('⚠️ Fetch já em andamento, ignorando...');
+          return;
+        }
+        const status = document.getElementById('status');
+        const results = document.getElementById('results');
+        const locEl = document.getElementById('location');
+        const sdEl = document.getElementById('startDate');
+        const stEl = document.getElementById('startTime');
+        // end date/time are computed in background and hidden; request will use days only
+        const daysEl = document.getElementById('days');
+        const location = (locEl && locEl.value || '').trim();
+        const delivery_date = sdEl && sdEl.value || '';
+        const start_time = stEl && (stEl.value || '10:00') || '10:00';
+        const days = parseInt((daysEl && daysEl.value) || '0', 10) || 0;
+        console.log('[FETCH] Iniciado - Location:', location, 'Date:', delivery_date, 'Days:', days);
+        
+        if (!location || !delivery_date || !days){
+          console.log('[FETCH] Parâmetros inválidos');
+          if (status) status.textContent = 'Preencha local, data de início e dias ou data de fim.';
+          return;
+        }
+        
+        // Verificar se está em cache
+        const cacheKey = getCacheKey(location, delivery_date, days);
+        console.log('[CACHE] Key:', cacheKey, '| Existe?', !!cachedResults[cacheKey]);
+        
+        if (cachedResults[cacheKey]) {
+          console.log('[CACHE] Usando cache para', days, 'dias');
+          const data = cachedResults[cacheKey];
+          const items = Array.isArray(data.items) ? data.items : [];
+          console.log('[CACHE]', items.length, 'items | Primeiro:', items[0]?.car, items[0]?.price);
+          
+          if (results) results.innerHTML = '';
+          
+          const section = document.createElement('div');
+          section.className = 'rounded-md border';
+          const inner = [];
+          inner.push(`<div class=\"px-4 py-2 bg-gray-50 text-sm font-medium\">${(data.days ?? '-')} day(s) — ${escapeHtml(data.location || '-')} <span class=\"text-blue-600 ml-2\">⚡ Cache</span><\/div>`);
+          
+          if (items.length === 0) {
+            inner.push(`<div class=\"px-4 py-3 text-center text-gray-600\"><p class="mb-2">⚠️ Nenhum resultado encontrado</p><\/div>`);
+          } else {
+            inner.push(`<div class=\"px-4 py-2 bg-gray-50 text-sm font-medium\">Grouped by Category<\/div>`);
+            inner.push(renderCategoryBlocks(items));
+          }
+          
+          section.innerHTML = inner.join('');
+          if (results) {
+            results.appendChild(section);
+            console.log('[RENDER] Completo do cache');
+          }
+          return;
+        }
+        
+        fetchInFlight = true;
+        fetchAllBtn.disabled = true; fetchAllBtn.classList.add('opacity-50','cursor-not-allowed');
+        if (status) status.textContent = '';
+        if (results) results.innerHTML = '';
+        const modal = document.getElementById('loadingModal');
+        const bar = document.querySelector('#loadingModal .progress .bar');
+        if (modal) { modal.classList.add('loading'); modal.classList.remove('hidden'); }
+        // Progressive loading bar controller
+        let progTimer = null;
+        function setBarWidth(p){ try { if (bar) bar.style.width = Math.max(0, Math.min(100, p)) + '%'; } catch(_){} }
+        let prog = 5; // start at 5%
+        setBarWidth(prog);
+        try { if (progTimer) clearInterval(progTimer); } catch(_){}
+        progTimer = setInterval(() => {
+          try {
+            // Progressive animation até 100% (mais lento perto do fim)
+            if (prog < 100) {
+              let step;
+              if (prog < 30) step = 2;        // rápido no início
+              else if (prog < 60) step = 1.5; // médio
+              else if (prog < 85) step = 1;   // lento
+              else step = 0.3;                // muito lento perto do fim
+              prog = Math.min(100, prog + step);
+              setBarWidth(prog);
+            }
+          } catch(_){}
+        }, 200);
+        try {
+          // Compute pickup date from delivery_date - days to match CarJet UX
+          let pickup_date = '';
+          try {
+            const d = toDate(delivery_date);
+            if (d && days>0) { const p = new Date(d); p.setDate(p.getDate()-days); pickup_date = fmtDate(p); }
+          } catch(_){}
+          const body = { location, start_date: pickup_date || delivery_date, start_time, days, lang: 'pt', currency: 'EUR' };
+          // Proactive warmup to avoid first-click issues
+          try { await fetch('/healthz', { credentials: 'same-origin', cache: 'no-store', keepalive: true }); } catch(_) {}
+          // Ensure date input is committed
+          try { if (sdEl) { sdEl.blur(); sdEl.dispatchEvent(new Event('change', { bubbles: true })); } } catch(_){ }
+          await new Promise(r=>setTimeout(r, 300));
+          async function doFetchOnce() {
+            const resp = await fetch('/api/track-by-params', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'same-origin', cache: 'no-store', redirect: 'follow', body: JSON.stringify(body) });
+            if (resp.status === 401) throw new Error('unauthorized');
+            let json;
+            try { json = await resp.json(); }
+            catch(_) { throw new Error('non_json'); }
+            if (!json || json.ok === false) {
+              const err = (json && json.error ? String(json.error) : '').toLowerCase();
+              if (err.includes('unauthorized')) throw new Error('unauthorized');
+              throw new Error((json && json.error) || 'Erro');
+            }
+            return json;
+          }
+          let data;
+          const attempts = [0, 300, 700, 1200]; // add a stronger 4th attempt
+          for (let i=0; i<attempts.length; i++) {
+            if (attempts[i] > 0) await new Promise(r=>setTimeout(r, attempts[i]));
+            try {
+              if (i===1) { if (status) status.textContent = 'A iniciar sessão...'; try { await fetch('/healthz', { credentials: 'same-origin', cache: 'no-store', keepalive: true }); } catch(_) {} }
+              if (i===2) { if (status) status.textContent = 'A sincronizar...'; try { await fetch('/healthz', { credentials: 'same-origin', cache: 'no-store', keepalive: true }); } catch(_) {} }
+              if (i===3) { if (status) status.textContent = 'A estabelecer sessão...'; try { await fetch('/', { credentials: 'same-origin', cache: 'no-store' }); } catch(_) {} }
+              data = await doFetchOnce();
+              break;
+            } catch(_) { data = undefined; }
+          }
+          if (!data) throw new Error('Não foi possível obter resultados. Tente novamente.');
+          const items = Array.isArray(data.items) ? data.items : [];
+          
+          // Salvar no cache para uso futuro
+          const cacheKey = getCacheKey(location, delivery_date, days);
+          cachedResults[cacheKey] = data;
+          
+          const section = document.createElement('div');
+          section.className = 'rounded-md border';
+          const inner = [];
+          inner.push(`<div class=\"px-4 py-2 bg-gray-50 text-sm font-medium\">${(data.days ?? '-') } day(s) — ${escapeHtml(data.location || '-')}<\/div>`);
+          
+          if (items.length === 0) {
+            inner.push(`<div class=\"px-4 py-3 text-center text-gray-600\">
+              <p class="mb-2">⚠️ Nenhum resultado encontrado</p>
+              <p class="text-sm">A sessão pode ter expirado. Por favor, tente novamente.</p>
+            <\/div>`);
+          } else {
+            inner.push(`<div class=\"px-4 py-2 bg-gray-50 text-sm font-medium\">Grouped by Category<\/div>`);
+            inner.push(renderCategoryBlocks(items));
+          }
+          
+          section.innerHTML = inner.join('');
+          if (results) results.appendChild(section);
+        } catch (err) {
+          if (status) status.textContent = 'Falha: ' + err;
+        } finally {
+          fetchInFlight = false; fetchAllBtn.disabled = false; fetchAllBtn.classList.remove('opacity-50','cursor-not-allowed');
+          // Garantir que barra chegue a 100% suavemente
+          if (prog < 100) {
+            const finalInterval = setInterval(() => {
+              if (prog < 100) {
+                prog = Math.min(100, prog + 2);
+                setBarWidth(prog);
+              } else {
+                clearInterval(finalInterval);
+              }
+            }, 50);
+          }
+          // Fechar modal depois que barra chegar a 100%
+          setTimeout(() => {
+            if (modal) { modal.classList.remove('loading'); modal.classList.add('hidden'); setBarWidth(0); prog = 0; }
+            try { if (progTimer) clearInterval(progTimer); } catch(_){ }
+          }, prog >= 100 ? 300 : 1000);
+        }
+      }
+      if (fetchAllBtn && !fetchAllBtn._bound) { fetchAllBtn.addEventListener('click', window.runBulkFetch); fetchAllBtn._bound = true; }
+      try { const pf = document.getElementById('paramForm'); if (pf && !pf._bound) { pf.addEventListener('submit', window.runBulkFetch); pf.addEventListener('keydown', (e)=>{ if (e.key==='Enter') { e.preventDefault(); window.runBulkFetch(e); } }); pf._bound = true; } } catch(_) {}
+
+      // Fetch All Days - pré-carregar todos os períodos
+      const fetchAllDaysBtn = document.getElementById('fetchAllDaysBtn');
+      const fetchAllStatus = document.getElementById('fetchAllStatus');
+      
+      if (fetchAllDaysBtn && !fetchAllDaysBtn._bound) {
+        fetchAllDaysBtn.addEventListener('click', async () => {
+          const locEl = document.getElementById('location');
+          const sdEl = document.getElementById('startDate');
+          const stEl = document.getElementById('startTime');
+          
+          const location = (locEl && locEl.value || '').trim();
+          const delivery_date = sdEl && sdEl.value || '';
+          const start_time = stEl && (stEl.value || '10:00') || '10:00';
+          
+          if (!location || !delivery_date) {
+            if (fetchAllStatus) fetchAllStatus.textContent = '⚠️ Preencha local e data primeiro';
+            return;
+          }
+          
+          const daysList = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 31, 60];
+          
+          try {
+            fetchAllDaysBtn.disabled = true;
+            fetchAllDaysBtn.textContent = '⏳ Carregando...';
+            if (fetchAllStatus) {
+              fetchAllStatus.textContent = 'Carregando 0/' + daysList.length;
+              fetchAllStatus.className = 'text-xs font-medium';
+              fetchAllStatus.style.color = '#009cb6';
+            }
+            
+            let completed = 0;
+            
+            for (const days of daysList) {
+              try {
+                let pickup_date = '';
+                try {
+                  const d = toDate(delivery_date);
+                  if (d && days>0) { const p = new Date(d); p.setDate(p.getDate()-days); pickup_date = fmtDate(p); }
+                } catch(_){}
+                
+                const body = { location, start_date: pickup_date || delivery_date, start_time, days, lang: 'pt', currency: 'EUR' };
+                console.log(`[FETCH ALL] ${days}d - Enviando request...`);
+                
+                const resp = await fetch('/api/track-by-params', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'same-origin',
+                  cache: 'no-store',
+                  body: JSON.stringify(body)
+                });
+                
+                if (resp.status === 401) {
+                  throw new Error('Não autorizado - faça login novamente');
+                }
+                
+                const data = await resp.json();
+                
+                if (data && data.ok !== false) {
+                  const cacheKey = getCacheKey(location, delivery_date, days);
+                  cachedResults[cacheKey] = data;
+                  console.log(`[FETCH ALL] ${days}d - Cache salvo (${data.items?.length || 0} items)`);
+                }
+                
+                completed++;
+                if (fetchAllStatus) {
+                  fetchAllStatus.innerHTML = `<span style="background: #f4ad0f; color: white; padding: 2px 4px; border-radius: 3px; font-weight: 700; margin-right: 4px;">✓</span> ${completed}/${daysList.length} períodos carregados`;
+                  fetchAllStatus.style.color = '#009cb6';
+                }
+              } catch (err) {
+                console.error(`❌ Erro ao carregar ${days}d:`, err);
+                completed++;
+                if (fetchAllStatus) {
+                  fetchAllStatus.textContent = `⚠️ ${completed}/${daysList.length} (erro em ${days}d)`;
+                  fetchAllStatus.className = 'text-xs font-medium';
+                  fetchAllStatus.style.color = '#f4ad0f';
+                }
+              }
+            }
+            
+            if (fetchAllStatus) {
+              fetchAllStatus.innerHTML = `<span style="background: #f4ad0f; color: white; padding: 2px 4px; border-radius: 3px; font-weight: 700; margin-right: 4px;">✓</span> ${completed}/${daysList.length} períodos prontos!`;
+              fetchAllStatus.className = 'text-xs font-medium';
+              fetchAllStatus.style.color = '#009cb6';
+            }
+            
+            // Atualizar chips para mostrar checkmarks
+            try {
+              const daysInput = document.getElementById('days');
+              if (daysInput) {
+                const onChange = (d) => {
+                  window.selectedDays = d;
+                  daysInput.value = String(d);
+                  daysInput.dispatchEvent(new Event('input', { bubbles: true }));
+                  renderChips('daysChips', daysList, onChange);
+                };
+                renderChips('daysChips', daysList, onChange);
+              }
+            } catch(_) {}
+            
+            // Limpar status após 5s
+            setTimeout(() => {
+              if (fetchAllStatus) {
+                fetchAllStatus.textContent = '';
+                fetchAllStatus.className = 'text-xs text-gray-500';
+              }
+            }, 5000);
+            
+          } catch (err) {
+            if (fetchAllStatus) {
+              fetchAllStatus.textContent = '❌ Erro: ' + err.message;
+              fetchAllStatus.className = 'text-xs font-medium';
+              fetchAllStatus.style.color = '#f4ad0f';
+            }
+          } finally {
+            fetchAllDaysBtn.disabled = false;
+            fetchAllDaysBtn.textContent = '📊 Fetch All (Todos os Dias)';
+          }
+        });
+        fetchAllDaysBtn._bound = true;
+      }
+
+      // Warmup to reduce first-click issues (ensures session/cookies)
+      try { fetch('/healthz', { credentials: 'same-origin', cache: 'no-store', keepalive: true }).catch(()=>{}); } catch(_){ }
+
+      function renderBulkResults(results, resA, resF, statusA, statusF) {
+        for (const block of results) {
+          const container = block.location.toLowerCase().includes('albufeira') ? resA : resF;
+          const status = block.location.toLowerCase().includes('albufeira') ? statusA : statusF;
+          status.textContent = '';
+          for (const d of block.durations) {
+            const section = document.createElement('div');
+            section.className = 'rounded-md border';
+            const header = document.createElement('div');
+            header.className = 'px-4 py-2 bg-gray-50 text-sm font-medium';
+            header.textContent = `${d.days} day(s)`;
+            const wrapper = document.createElement('div');
+            // Desktop table structure
+            const tableWrap = document.createElement('div');
+            tableWrap.className = 'hidden md:block overflow-x-auto';
+            const table = document.createElement('table');
+            table.className = 'min-w-full divide-y divide-gray-200';
+            table.innerHTML = `
+              <thead class="bg-[#009cb6]">
+                <tr>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-white uppercase">#</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-white uppercase">Supplier</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-white uppercase">Car</th>
+                  <th class="px-4 py-2 text-left text-xs font-medium text-white uppercase">Total Price</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-gray-200 bg-white"></tbody>`;
+            const tbody = table.querySelector('tbody');
+            tableWrap.appendChild(table);
+
+            // Mobile cards container
+            const cardsWrap = document.createElement('div');
+            cardsWrap.className = 'block md:hidden';
+
+            wrapper.appendChild(tableWrap);
+            wrapper.appendChild(cardsWrap);
+            section.appendChild(header);
+            section.appendChild(wrapper);
+            container.appendChild(section);
+
+            // Incremental append in chunks
+            const items = Array.isArray(d.items) ? d.items : [];
+            const chunkSize = 40;
+            let i = 0;
+            function appendChunk(){
+              const end = Math.min(i + chunkSize, items.length);
+              for (; i < end; i++){
+                const it = items[i];
+                const tr = document.createElement('tr');
+                if (/auto prudente/i.test(it.supplier||'')) tr.style.backgroundColor = 'var(--brand-teal-20)';
+                tr.innerHTML = `
+                  <td class="px-4 py-2 text-sm text-gray-600">${i + 1}</td>
+                  <td class="px-4 py-2 text-sm">${escapeHtml(it.supplier || '')}</td>
+                  <td class="px-4 py-2 text-sm">${escapeHtml(it.car || '')}</td>
+                  <td class="px-4 py-2 text-sm font-medium">${escapeHtml(it.price || '')}</td>`;
+                tbody.appendChild(tr);
+              }
+              // Update mobile cards lazily too
+              if (end > 0){
+                const slice = items.slice(Math.max(0, end - chunkSize), end);
+                const grid = document.createElement('div');
+                grid.innerHTML = renderCardsForItems(slice);
+                cardsWrap.appendChild(grid);
+              }
+              if (i < items.length){
+                requestAnimationFrame(() => setTimeout(appendChunk, 0));
+              }
+            }
+            appendChunk();
+          }
+        }
+      }
+
+      function splitLines(v) {
+        return (v || '').split(/\r?\n/).map(s => s.trim()).filter(Boolean);
+      }
+
+      function escapeHtml(str) {
+        return String(str).replace(/[&<>\"]+/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;'}[s]));
+      }
+    </script>
+  </body>
+</html>

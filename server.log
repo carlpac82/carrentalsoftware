@@ -1,0 +1,14 @@
+INFO:     None:0 - "GET / HTTP/1.1" 303 See Other
+INFO:     None:0 - "GET /login HTTP/1.1" 200 OK
+INFO:     None:0 - "GET /static/ap-logo.png HTTP/1.1" 200 OK
+INFO:     None:0 - "GET /static/ap-logo.png HTTP/1.1" 200 OK
+INFO:     None:0 - "POST /login HTTP/1.1" 303 See Other
+INFO:     None:0 - "GET / HTTP/1.1" 200 OK
+INFO:     None:0 - "GET /static/manifest.webmanifest HTTP/1.1" 200 OK
+INFO:     None:0 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     None:0 - "GET /static/autoprudente-favicon.png?v=2 HTTP/1.1" 200 OK
+INFO:     None:0 - "POST /api/track-by-params HTTP/1.1" 200 OK
+INFO:     None:0 - "POST /api/track-by-params HTTP/1.1" 200 OK
+INFO:     None:0 - "POST /api/track-by-params HTTP/1.1" 200 OK
+INFO:     None:0 - "POST /api/track-by-params HTTP/1.1" 200 OK
+INFO:     None:0 - "POST /api/track-by-params HTTP/1.1" 200 OK
