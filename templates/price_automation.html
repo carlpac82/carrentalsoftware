@@ -907,11 +907,22 @@
         function updateTableCellValues(mode) {
             const currentLocation = document.getElementById('locationAuto')?.value || 'Albufeira';
             let updatedCount = 0;
+            let hasGeneratedPrices = false;
             
             // Store original AUTO values if not already stored
             if (!window.autoTableValues) {
                 window.autoTableValues = {};
             }
+            
+            // Check if prices were already generated
+            grupos.forEach(grupo => {
+                dias.forEach(day => {
+                    const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${grupo}"][data-dias="${day}"][data-type="auto"]`);
+                    if (inputAuto && inputAuto.value && inputAuto.value !== '' && inputAuto.value !== '-') {
+                        hasGeneratedPrices = true;
+                    }
+                });
+            });
             
             grupos.forEach(grupo => {
                 dias.forEach(day => {
@@ -925,6 +936,14 @@
                     }
                     
                     if (mode === 'ai') {
+                        // If no prices generated yet, leave empty
+                        if (!hasGeneratedPrices) {
+                            inputAuto.value = '';
+                            inputAuto.classList.add('bg-purple-50', 'text-purple-600');
+                            inputAuto.classList.remove('text-[#f4ad0f]');
+                            return;
+                        }
+                        
                         // Switch to AI values
                         const aiPrice = getAIPrice(grupo, day, currentLocation);
                         if (aiPrice && aiPrice > 0) {
@@ -932,6 +951,11 @@
                             inputAuto.classList.add('bg-purple-50', 'text-purple-600');
                             inputAuto.classList.remove('text-[#f4ad0f]');
                             updatedCount++;
+                        } else {
+                            // No AI data for this cell, leave empty
+                            inputAuto.value = '';
+                            inputAuto.classList.add('bg-purple-50', 'text-purple-600');
+                            inputAuto.classList.remove('text-[#f4ad0f]');
                         }
                     } else {
                         // Switch back to AUTO values
@@ -947,8 +971,10 @@
             
             console.log(`🔄 Updated ${updatedCount} cells to ${mode.toUpperCase()} mode`);
             
-            if (mode === 'ai' && updatedCount === 0) {
-                showNotification('No AI data available yet. Make manual adjustments to train the AI.', 'warning', 5000);
+            if (mode === 'ai' && !hasGeneratedPrices) {
+                console.log('⚠️ No prices generated yet, AI mode shows empty cells');
+            } else if (mode === 'ai' && updatedCount === 0) {
+                console.log('⚠️ No AI learning data available yet');
             }
         }
         
