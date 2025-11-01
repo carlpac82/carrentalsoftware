@@ -1357,8 +1357,9 @@ def convert_items_gbp_to_eur(items: List[Dict[str, Any]]) -> List[Dict[str, Any]
 
 # CarJet destination codes we target  
 LOCATION_CODES = {
-    "albufeira": "ABF01",
-    "albufeira cidade": "ABF01",
+    # Albufeira: deixar vazio para o CarJet descobrir automaticamente
+    # "albufeira": "ABF01",  # ABF01 não funciona - testar sem código
+    # "albufeira cidade": "ABF01",
     "faro": "FAO01",
     "faro airport": "FAO01",
     "faro aeroporto": "FAO01",
@@ -7312,8 +7313,9 @@ async def fetch_carjet_results(page, location_name, start_dt, end_dt, lang: str,
             # Force known internal codes for target locations if inputs exist
             try:
                 code_map = {
-                    "Albufeira": "ABF01",
-                    "Albufeira Cidade": "ABF01",
+                    # Albufeira: ABF01 não funciona - deixar CarJet descobrir
+                    # "Albufeira": "ABF01",
+                    # "Albufeira Cidade": "ABF01",
                     "Faro Airport": "FAO02",
                     "Faro Aeroporto": "FAO02",
                 }
