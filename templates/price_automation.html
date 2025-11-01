@@ -454,11 +454,6 @@
                     </div>
                     
                     <div class="flex items-end gap-2">
-                        <button id="btnAIPriceSuggestions" onclick="showAIPriceSuggestions()" class="p-2 hover:bg-gray-100 rounded transition-colors" title="AI Price Suggestions based on detected periods">
-                            <svg class="w-6 h-6 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
-                            </svg>
-                        </button>
                         <button id="btnGenerateAuto" onclick="generateAutomatedPrices()" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Generate automated prices">
                             <svg class="w-6 h-6 text-[#f4ad0f] generate-icon" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
@@ -485,15 +480,17 @@
             <div class="border-t pt-4 flex items-center justify-between">
                 <div class="flex items-center gap-3">
                     <span class="text-sm text-gray-600">View:</span>
-                    <button onclick="toggleView('cards')" id="btnViewCards" class="p-2 border border-gray-300 hover:bg-gray-50 rounded transition-colors" title="Visual Cards">
-                        <svg class="w-5 h-5 text-[#009cb6]" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"/>
+                    <button onclick="toggleView('cards')" id="btnViewCards" class="px-3 py-2 border border-gray-300 hover:bg-gray-50 rounded transition-colors text-sm flex items-center gap-2" title="AI Positioning Cards">
+                        <svg class="w-4 h-4 text-[#8b5cf6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
                         </svg>
+                        AI Positioning
                     </button>
-                    <button onclick="toggleView('table')" id="btnViewTable" class="p-2 border border-[#009cb6] bg-[#009cb6] bg-opacity-10 rounded transition-colors" title="Table">
-                        <svg class="w-5 h-5 text-[#009cb6]" fill="currentColor" viewBox="0 0 24 24">
+                    <button onclick="toggleView('table')" id="btnViewTable" class="px-3 py-2 border border-[#009cb6] bg-[#009cb6] bg-opacity-10 rounded transition-colors text-sm flex items-center gap-2" title="Table">
+                        <svg class="w-4 h-4 text-[#009cb6]" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z"/>
                         </svg>
+                        Table
                     </button>
                 </div>
                 <div class="flex items-center gap-3">
@@ -2762,13 +2759,18 @@
                 
                 showNotification(message, (autoPricesGenerated > 0 || realPricesGenerated > 0) ? 'success' : 'warning');
                 
-                // Render price comparison cards (hidden by default, user can toggle)
+                // Render price comparison cards and show them by default
                 if (autoPricesGenerated > 0 || realPricesGenerated > 0) {
                     console.log('🎨 Rendering price comparison cards...');
                     renderPriceComparisonCards(allCarsByDay, automatedPricesByGroup, dias);
-                    // Keep cards hidden, show table by default
-                    document.getElementById('priceComparisonCards').classList.add('hidden');
-                    document.getElementById('priceTableContainer').classList.remove('hidden');
+                    // Show AI Positioning cards by default, hide table
+                    document.getElementById('priceComparisonCards').classList.remove('hidden');
+                    document.getElementById('priceTableContainer').classList.add('hidden');
+                    // Update button states
+                    document.getElementById('btnViewCards').classList.add('border-[#8b5cf6]', 'bg-purple-50');
+                    document.getElementById('btnViewCards').classList.remove('border-gray-300');
+                    document.getElementById('btnViewTable').classList.remove('border-[#009cb6]', 'bg-[#009cb6]', 'bg-opacity-10');
+                    document.getElementById('btnViewTable').classList.add('border-gray-300');
                 }
                 
                 progressText.textContent = '✅ Generation complete!';
@@ -4515,11 +4517,15 @@ Continue?`);
             
             if (dateType === 'specific') {
                 const dateStr = document.getElementById('pickupDateAuto').value;
+                if (!dateStr) {
+                    return null;
+                }
                 return {
                     type: 'specific',
+                    date: dateStr,
                     startDate: dateStr,
                     endDate: dateStr,
-                    description: `Date: ${dateStr}`
+                    description: `Date: ${new Date(dateStr).toLocaleDateString()}`
                 };
             } else if (dateType === 'month') {
                 const monthStr = document.getElementById('monthPickerAuto').value;
