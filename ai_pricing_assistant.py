@@ -65,7 +65,9 @@ class AIPricingAssistant:
         location: str,
         current_price: float,
         competitors: List[Dict[str, Any]],
-        historical_data: Optional[List[Dict]] = None
+        historical_data: Optional[List[Dict]] = None,
+        min_price_day: Optional[float] = None,
+        min_price_month: Optional[float] = None
     ) -> Dict[str, Any]:
         """
         Analisa posicionamento de mercado usando AI externa
@@ -77,26 +79,40 @@ class AIPricingAssistant:
             current_price: Preço atual AutoPrudente
             competitors: Lista de preços dos competidores
             historical_data: Dados históricos opcionais
+            min_price_day: Preço mínimo por dia (NUNCA pode ser menor)
+            min_price_month: Preço mínimo para reservas ≥30 dias
             
         Returns:
             Dict com análise e sugestões da AI
         """
         
         if not self.is_available():
-            return self._fallback_analysis(group, days, location, current_price, competitors)
+            return self._fallback_analysis(
+                group, days, location, current_price, competitors,
+                min_price_day, min_price_month
+            )
         
         # Preparar contexto para AI
         context = self._prepare_market_context(
-            group, days, location, current_price, competitors, historical_data
+            group, days, location, current_price, competitors, historical_data,
+            min_price_day, min_price_month
         )
         
         # Fazer request para AI
         if self.provider == "claude" and self.anthropic_client:
-            return self._analyze_with_claude(context)
+            analysis = self._analyze_with_claude(context)
         elif self.provider == "openai" and self.openai_client:
-            return self._analyze_with_openai(context)
+            analysis = self._analyze_with_openai(context)
         else:
-            return self._fallback_analysis(group, days, location, current_price, competitors)
+            return self._fallback_analysis(
+                group, days, location, current_price, competitors,
+                min_price_day, min_price_month
+            )
+        
+        # VALIDAÇÃO CRÍTICA: Aplicar preço mínimo
+        analysis = self._enforce_minimum_price(analysis, days, min_price_day, min_price_month)
+        
+        return analysis
     
     def _prepare_market_context(
         self,
@@ -105,7 +121,9 @@ class AIPricingAssistant:
         location: str,
         current_price: float,
         competitors: List[Dict],
-        historical_data: Optional[List[Dict]]
+        historical_data: Optional[List[Dict]],
+        min_price_day: Optional[float] = None,
+        min_price_month: Optional[float] = None
     ) -> Dict[str, Any]:
         """Prepara contexto formatado para enviar à AI"""
         
@@ -154,7 +172,13 @@ class AIPricingAssistant:
                     for c in competitors[:10]  # Top 10 competitors
                 ]
             },
-            "historical_patterns": historical_data if historical_data else []
+            "historical_patterns": historical_data if historical_data else [],
+            "pricing_constraints": {
+                "min_price_day": min_price_day,
+                "min_price_month": min_price_month,
+                "applicable_minimum": min_price_month if days >= 30 and min_price_month else min_price_day,
+                "note": "CRITICAL: Recommended price MUST NEVER be below the applicable minimum"
+            }
         }
         
         return context
@@ -274,6 +298,14 @@ MARKET DATA:
 TOP COMPETITORS:
 {json.dumps(context['market_data']['competitors'], indent=2)}
 
+⚠️ PRICING CONSTRAINTS (CRITICAL):
+- Minimum Price/Day: €{context['pricing_constraints']['min_price_day']:.2f if context['pricing_constraints']['min_price_day'] else 'Not set'}
+- Minimum Price/Month (≥30d): €{context['pricing_constraints']['min_price_month']:.2f if context['pricing_constraints']['min_price_month'] else 'Not set'}
+- APPLICABLE MINIMUM: €{context['pricing_constraints']['applicable_minimum']:.2f if context['pricing_constraints']['applicable_minimum'] else 'Not set'}
+
+⛔ ABSOLUTE RULE: Your recommended price MUST NEVER be below the applicable minimum!
+   If market analysis suggests a lower price, recommend the minimum instead.
+
 ANALYSIS REQUIRED:
 1. Evaluate current pricing position (too cheap, too expensive, optimal)
 2. Consider booking type and customer psychology:
@@ -332,7 +364,9 @@ Provide your analysis and recommendation now:"""
         days: int,
         location: str,
         current_price: float,
-        competitors: List[Dict]
+        competitors: List[Dict],
+        min_price_day: Optional[float] = None,
+        min_price_month: Optional[float] = None
     ) -> Dict[str, Any]:
         """Análise fallback quando AI não está disponível"""
         
@@ -368,7 +402,7 @@ Provide your analysis and recommendation now:"""
             recommended = current_price
             reasoning = f"Well positioned at {percentile:.0f}th percentile."
         
-        return {
+        analysis = {
             "analysis": f"Fallback analysis: {len(competitors)} competitors analyzed",
             "current_position": "optimal" if 30 <= percentile <= 70 else ("too_cheap" if percentile < 30 else "too_expensive"),
             "recommended_price": recommended,
@@ -379,6 +413,67 @@ Provide your analysis and recommendation now:"""
             "reasoning": reasoning,
             "ai_provider": "fallback"
         }
+        
+        # Aplicar preço mínimo
+        return self._enforce_minimum_price(analysis, days, min_price_day, min_price_month)
+    
+    def _enforce_minimum_price(
+        self,
+        analysis: Dict[str, Any],
+        days: int,
+        min_price_day: Optional[float],
+        min_price_month: Optional[float]
+    ) -> Dict[str, Any]:
+        """
+        VALIDAÇÃO CRÍTICA: Garante que recommended_price NUNCA é menor que o mínimo
+        """
+        if 'recommended_price' not in analysis or analysis['recommended_price'] is None:
+            return analysis
+        
+        recommended = analysis['recommended_price']
+        
+        # Determinar preço mínimo aplicável
+        applicable_minimum = None
+        if days >= 30 and min_price_month:
+            applicable_minimum = min_price_month
+            min_type = "monthly"
+        elif min_price_day:
+            applicable_minimum = min_price_day
+            min_type = "daily"
+        
+        # Aplicar mínimo se necessário
+        if applicable_minimum and recommended < applicable_minimum:
+            original_price = recommended
+            analysis['recommended_price'] = applicable_minimum
+            analysis['price_change'] = applicable_minimum - analysis.get('current_price', recommended)
+            analysis['price_change_percentage'] = (
+                ((applicable_minimum - analysis.get('current_price', recommended)) / 
+                 analysis.get('current_price', recommended)) * 100
+                if analysis.get('current_price', recommended) > 0 else 0
+            )
+            
+            # Atualizar reasoning para explicar ajuste
+            original_reasoning = analysis.get('reasoning', '')
+            analysis['reasoning'] = (
+                f"{original_reasoning}\n\n"
+                f"⚠️ PRICE FLOOR APPLIED: AI suggested €{original_price:.2f}, but this is below "
+                f"the configured {min_type} minimum of €{applicable_minimum:.2f}. "
+                f"Price automatically adjusted to respect minimum pricing rules."
+            )
+            
+            analysis['minimum_price_applied'] = True
+            analysis['original_ai_suggestion'] = original_price
+            analysis['applied_minimum'] = applicable_minimum
+            analysis['minimum_type'] = min_type
+            
+            logging.info(
+                f"⚠️ Minimum price enforced: {original_price:.2f}€ → {applicable_minimum:.2f}€ "
+                f"({min_type} minimum for {days}d rental)"
+            )
+        else:
+            analysis['minimum_price_applied'] = False
+        
+        return analysis
     
     def is_available(self) -> bool:
         """Verifica se AI está disponível"""

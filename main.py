@@ -8696,6 +8696,8 @@ async def external_ai_analysis(request: Request):
         current_price = data.get("current_price")
         competitors = data.get("competitors", [])
         provider = data.get("provider", "claude")  # claude ou openai
+        min_price_day = data.get("min_price_day")  # Preço mínimo por dia
+        min_price_month = data.get("min_price_month")  # Preço mínimo para ≥30 dias
         
         if not all([group, days, location, current_price]):
             return JSONResponse({
@@ -8720,13 +8722,15 @@ async def external_ai_analysis(request: Request):
                     "fallback_used": True
                 }, status_code=503)
             
-            # Fazer análise
+            # Fazer análise com validação de preço mínimo
             analysis = ai_assistant.analyze_market_positioning(
                 group=group,
                 days=int(days),
                 location=location,
                 current_price=float(current_price),
-                competitors=competitors
+                competitors=competitors,
+                min_price_day=float(min_price_day) if min_price_day else None,
+                min_price_month=float(min_price_month) if min_price_month else None
             )
             
             logging.info(f"✅ AI Analysis completed: {group}/{days}d using {analysis.get('ai_provider', 'unknown')}")
