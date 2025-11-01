@@ -3762,18 +3762,59 @@ async def track_by_params(request: Request):
                     print(f"[SELENIUM] Digitando: {carjet_location}", file=sys.stderr, flush=True)
                     pickup_input.send_keys(carjet_location)
                     
-                    # PAUSA PARA VOCÊ CLICAR MANUALMENTE
-                    print(f"\n" + "="*60, file=sys.stderr, flush=True)
-                    print(f"[SELENIUM] ⏸️  PAUSADO! CLIQUE MANUALMENTE NO DROPDOWN!", file=sys.stderr, flush=True)
-                    print(f"[SELENIUM] Aguardando 30 segundos para você clicar...", file=sys.stderr, flush=True)
-                    print(f"="*60 + "\n", file=sys.stderr, flush=True)
-                    time.sleep(30)  # 30 SEGUNDOS para você clicar manualmente!
+                    # AGUARDAR DROPDOWN APARECER
+                    print(f"[SELENIUM] Aguardando dropdown aparecer...", file=sys.stderr, flush=True)
+                    time.sleep(2)  # Aguardar dropdown carregar
                     
-                    print(f"[SELENIUM] Continuando após pausa manual...", file=sys.stderr, flush=True)
-                    time.sleep(2)  # Aguardar um pouco mais
+                    # CLICAR NO DROPDOWN - SELETORES CORRETOS DO CARJET
+                    clicked = False
                     
-                    # DESATIVADO - Tentativas automáticas de click (você já clicou manualmente)
-                    # O código automático está comentado para não interferir com o click manual
+                    # Tentar seletores específicos do CarJet baseado no HTML real
+                    carjet_selectors = [
+                        f"#recogida_lista li[data-id='{carjet_location}'] a",
+                        f"#recogida_lista li[data-id='{carjet_location}']",
+                        "#recogida_lista li.history-list:first-child a",
+                        "#recogida_lista li.history-list:first-child",
+                        ".autocomplete-list li[data-id] a:first",
+                        ".autocomplete-list li[data-id]:first",
+                    ]
+                    
+                    for selector in carjet_selectors:
+                        try:
+                            print(f"[SELENIUM] Tentando: {selector}", file=sys.stderr, flush=True)
+                            dropdown_item = WebDriverWait(driver, 3).until(
+                                EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
+                            )
+                            dropdown_item.click()
+                            clicked = True
+                            print(f"[SELENIUM] ✓ Dropdown clicado via: {selector}", file=sys.stderr, flush=True)
+                            time.sleep(1)
+                            break
+                        except Exception as e:
+                            pass
+                    
+                    # Se não conseguiu, tentar via JavaScript com data-id
+                    if not clicked:
+                        print(f"[SELENIUM] Tentando click via JavaScript...", file=sys.stderr, flush=True)
+                        try:
+                            driver.execute_script(f"""
+                                const item = document.querySelector('#recogida_lista li[data-id="{carjet_location}"]');
+                                if (item) {{
+                                    item.click();
+                                    return true;
+                                }}
+                                const link = document.querySelector('#recogida_lista li[data-id="{carjet_location}"] a');
+                                if (link) {{
+                                    link.click();
+                                    return true;
+                                }}
+                                return false;
+                            """)
+                            clicked = True
+                            print(f"[SELENIUM] ✓ Dropdown clicado via JavaScript", file=sys.stderr, flush=True)
+                            time.sleep(1)
+                        except:
+                            print(f"[SELENIUM] ⚠ Não conseguiu clicar no dropdown!", file=sys.stderr, flush=True)
                     
                     time.sleep(0.5)
                     
