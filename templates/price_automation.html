@@ -385,6 +385,12 @@
                     </button>
                 </div>
                 <div class="flex items-center gap-3">
+                    <span class="text-sm text-gray-600 font-medium">Tariff Period:</span>
+                    <input type="number" id="wr_start_day" min="1" max="31" value="1" class="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" placeholder="01">
+                    <span class="text-sm text-gray-500">to</span>
+                    <input type="number" id="wr_end_day" min="1" max="31" value="31" class="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" placeholder="31">
+                </div>
+                <div class="flex items-center gap-3">
                     <span class="text-sm text-gray-600">Download Excel:</span>
                     <button onclick="downloadExcel('way2rentals')" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Download Way2Rentals">
                         <svg class="w-6 h-6 text-[#f4ad0f]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -578,6 +584,12 @@
                         </svg>
                         Remove
                     </button>
+                </div>
+                <div class="flex items-center gap-3">
+                    <span class="text-sm text-gray-600 font-medium">Tariff Period:</span>
+                    <input type="number" id="wr_start_day" min="1" max="31" value="1" class="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" placeholder="01">
+                    <span class="text-sm text-gray-500">to</span>
+                    <input type="number" id="wr_end_day" min="1" max="31" value="31" class="w-16 px-2 py-1 border border-gray-300 rounded text-sm text-center" placeholder="31">
                 </div>
                 <div class="flex items-center gap-3">
                     <span class="text-sm text-gray-600">Download Excel:</span>
@@ -1904,13 +1916,31 @@
             // Commission: 13.66%
             const commission = 0.1366;
             
-            // Get current date for filename: WR-DIA-MES.csv
+            // Get period days from inputs (if exist)
+            const startDayInput = document.getElementById('wr_start_day');
+            const endDayInput = document.getElementById('wr_end_day');
+            
+            let startDay = '01';
+            let endDay = '31';
+            
+            if (startDayInput && startDayInput.value) {
+                startDay = startDayInput.value.padStart(2, '0');
+            }
+            if (endDayInput && endDayInput.value) {
+                endDay = endDayInput.value.padStart(2, '0');
+            }
+            
+            // Get current date for filename: WR-STARTDAY-ENDDAY-MONTH.csv
             const date = document.getElementById('pickupDate').value;
-            let filename = 'WR-export.csv';
+            let monthName = 'NOV';
+            let filename = `WR-${startDay}-${endDay}-NOV.csv`;
             
             if (date) {
                 const [year, month, day] = date.split('-');
-                filename = `WR-${day}-${month}.csv`;
+                const monthNames = ['JAN','FEV','MAR','ABR','MAI','JUN',
+                                    'JUL','AGO','SET','OUT','NOV','DEZ'];
+                monthName = monthNames[parseInt(month) - 1];
+                filename = `WR-${startDay}-${endDay}-${monthName}.csv`;
             }
             
             // Build CSV content
@@ -3742,8 +3772,110 @@
         }
         
         function downloadExcelAuto(format) {
-            showNotification('Excel download for automated prices will be implemented soon', 'info');
-            // TODO: Implement Excel download for automated prices
+            if (format === 'way2rentals') {
+                exportWay2RentalsCSVFromAuto();
+            } else {
+                showNotification('Excel download for automated prices will be implemented soon', 'info');
+            }
+        }
+        
+        function exportWay2RentalsCSVFromAuto() {
+            console.log('📤 Exporting Way2Rentals CSV from Automated Prices...');
+            
+            // Way2Rentals group mapping
+            const way2rentalsGroups = ['B1', 'B2', 'BK1', 'BK2', 'C', 'C3', 'C4', 'C5', 'D', 'DK', 
+                                       'E1', 'E2', 'EK1', 'EK2', 'F', 'FK', 'G', 'J1', 'J2', 'JK1', 'JK2', 
+                                       'L1', 'L2', 'LK1', 'M1', 'M2', 'MK1', 'MK2', 'N', 'NK', 'X'];
+            
+            // Groups to ignore (leave empty)
+            const ignoredGroups = ['BK1', 'BK2', 'C3', 'C4', 'C5', 'DK', 'EK1', 'EK2', 'FK', 
+                                   'JK1', 'JK2', 'LK1', 'MK1', 'MK2', 'NK', 'X'];
+            
+            // Way2Rentals day periods
+            const way2rentalsDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 35];
+            
+            // Commission: 13.66%
+            const commission = 0.1366;
+            
+            // Get period days from inputs (if exist)
+            const startDayInput = document.getElementById('wr_start_day');
+            const endDayInput = document.getElementById('wr_end_day');
+            
+            let startDay = '01';
+            let endDay = '31';
+            
+            if (startDayInput && startDayInput.value) {
+                startDay = startDayInput.value.padStart(2, '0');
+            }
+            if (endDayInput && endDayInput.value) {
+                endDay = endDayInput.value.padStart(2, '0');
+            }
+            
+            // Get current date for month
+            const date = document.getElementById('pickupDateAuto')?.value || 
+                         document.getElementById('pickupDate')?.value;
+            
+            let monthName = 'NOV';
+            let filename = `WR-${startDay}-${endDay}-NOV.csv`;
+            
+            if (date) {
+                const [year, month, day] = date.split('-');
+                const monthNames = ['JAN','FEV','MAR','ABR','MAI','JUN',
+                                    'JUL','AGO','SET','OUT','NOV','DEZ'];
+                monthName = monthNames[parseInt(month) - 1];
+                filename = `WR-${startDay}-${endDay}-${monthName}.csv`;
+            }
+            
+            // Build CSV content
+            let csvContent = 'Dias;' + way2rentalsGroups.join(';') + '\n';
+            
+            // For each day period
+            way2rentalsDays.forEach(days => {
+                const rowData = [days]; // Start with day count
+                
+                way2rentalsGroups.forEach(grupo => {
+                    // Skip ignored groups (leave empty)
+                    if (ignoredGroups.includes(grupo)) {
+                        rowData.push('');
+                        return;
+                    }
+                    
+                    // Group C copies from group D
+                    const sourceGroup = grupo === 'C' ? 'D' : grupo;
+                    
+                    // Get Auto price input from Automated Prices table
+                    const inputAuto = document.querySelector(`#automatedPricesTable input[data-grupo="${sourceGroup}"][data-dias="${days}"][data-type="auto"]`);
+                    
+                    if (inputAuto && inputAuto.value) {
+                        const autoPrice = parseFloat(inputAuto.value);
+                        
+                        if (autoPrice > 0) {
+                            // Calculate: (Auto - 13.66%) / Days
+                            const netTotal = autoPrice * (1 - commission);
+                            const netPerDay = netTotal / days;
+                            
+                            // Format with 2 decimals and dot separator
+                            rowData.push(netPerDay.toFixed(2));
+                        } else {
+                            rowData.push('');
+                        }
+                    } else {
+                        rowData.push('');
+                    }
+                });
+                
+                csvContent += rowData.join(';') + '\n';
+            });
+            
+            // Download CSV
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.click();
+            
+            console.log(`✅ Way2Rentals CSV exported: ${filename}`);
+            showNotification(`✅ Way2Rentals CSV exported: ${filename}`, 'success');
         }
 
         function generateHistoryMonths() {
