@@ -2193,54 +2193,182 @@
             console.log(`✅ AI data saved. Total adjustments: ${aiData.adjustments.length}`);
         }
         
+        // Mapa completo de logos (mesmo do index.html)
+        const supplierLogoMap = {
+            // A
+            'ABB': '/static/logos/logo_ABB.png.avif',
+            'ABB1': '/static/logos/logo_ABB.png.avif',
+            'Abbycar': '/static/logos/logo_ABB.png.avif',
+            'Abbycar Não reembolsável': '/static/logos/logo_ABB.png.avif',
+            'ACE': '/static/logos/logo_ACE.png',
+            'Ace Rent a Car': '/static/logos/logo_ACE.png',
+            'AIR': '/static/logos/logo_AIR.png',
+            'ALM': '/static/logos/logo_ALM.png.avif',
+            'Alamo': '/static/logos/logo_ALM.png.avif',
+            'AMI': '/static/logos/logo_AMI.png',
+            'AMI1': '/static/logos/logo_AMI.png',
+            'Amigoautos': '/static/logos/logo_AMI.png',
+            'Amigoautos Não reembolsável': '/static/logos/logo_AMI.png',
+            'ATR': '/static/logos/logo_ATR.png',
+            'Autorent': '/static/logos/logo_ATR.png',
+            'Auto Rent': '/static/logos/logo_ATR.png',
+            'AUP': '/static/logos/logo_AUP.png',
+            'Auto Prudente': '/static/logos/logo_AUP.png',
+            'AUU': '/static/logos/logo_AUU.png',
+            'Auto Union': '/static/logos/logo_AUU.png',
+            'AVX': '/static/logos/logo_AVX.png',
+            'Avis': '/static/logos/logo_AVX.png',
+            // B
+            'BGX': '/static/logos/logo_BGX.png.avif',
+            'Budget': '/static/logos/logo_BGX.png.avif',
+            'BSD': '/static/logos/logo_BSD.png',
+            'Best Deal': '/static/logos/logo_BSD.png',
+            'Booking.com': '/static/logos/logo_BSD.png',
+            // C
+            'CAE': '/static/logos/logo_CAE.png',
+            'CarRentals': '/static/logos/logo_CAE.png',
+            'CAL': '/static/logos/logo_CAE.png',
+            'Caleche': '/static/logos/logo_CAE.png',
+            'CAR': '/static/logos/logo_CAR.png',
+            'Carnect': '/static/logos/logo_CAR.png',
+            'Car Nect': '/static/logos/logo_CAR.png',
+            'Car-Nect': '/static/logos/logo_CAR.png',
+            'CEN': '/static/logos/logo_CEN.png.avif',
+            'Centauro': '/static/logos/logo_CEN.png.avif',
+            'CLA': '/static/logos/logo_CLA.png',
+            'Caldera': '/static/logos/logo_CLA.png',
+            // D
+            'D4F': '/static/logos/logo_D4F.png.avif',
+            'Drive4fun': '/static/logos/logo_D4F.png.avif',
+            'DOH': '/static/logos/logo_DOY.png',
+            'DOY': '/static/logos/logo_DOY.png',
+            'Drive on Holidays': '/static/logos/logo_DOY.png',
+            'DTG': '/static/logos/logo_DTG.png',
+            'DTG1': '/static/logos/logo_DTG1.png',
+            'Dollar': '/static/logos/logo_DTG.png',
+            'DVM': '/static/logos/logo_DVM.png',
+            'Drive4move': '/static/logos/logo_DVM.png',
+            'Drive 4 Move': '/static/logos/logo_DVM.png',
+            // E
+            'ECR': '/static/logos/logo_ECR.png.avif',
+            'Europcar': '/static/logos/logo_ECR.png.avif',
+            'ENT': '/static/logos/logo_ENT.png',
+            'Enterprise': '/static/logos/logo_ENT.png',
+            'EPI': '/static/logos/logo_EPI.png',
+            'EU2': '/static/logos/logo_EUR.png',
+            'EUK': '/static/logos/logo_EUK.png',
+            'EUR': '/static/logos/logo_EUR.png',
+            'Goldcar': '/static/logos/logo_EUR.png',
+            'Goldcar Não reembolsável': '/static/logos/logo_EUR.png',
+            'Goldcar Keyn Go': '/static/logos/logo_EUK.png',
+            // F
+            'FFX': '/static/logos/logo_FFX.png',
+            'Firefly': '/static/logos/logo_FFX.png',
+            'FLC': '/static/logos/logo_FLZ.png.avif',
+            'FLZ': '/static/logos/logo_FLZ.png.avif',
+            'Flizzr': '/static/logos/logo_FLZ.png.avif',
+            'Flizzr by Sixt': '/static/logos/logo_FLZ.png.avif',
+            // G
+            'GMO': '/static/logos/logo_GMO.png',
+            'GMO1': '/static/logos/logo_GMO.png',
+            'Green Motion': '/static/logos/logo_GMO.png',
+            'Green Motion Não reembolsável': '/static/logos/logo_GMO.png',
+            'GRE': '/static/logos/logo_GMO.png',
+            'GRM': '/static/logos/logo_GMO.png',
+            'GUE': '/static/logos/logo_GUE.png',
+            'Guerin': '/static/logos/logo_GUE.png',
+            // H
+            'HER': '/static/logos/logo_HER.png',
+            'Hertz': '/static/logos/logo_HER.png',
+            // I
+            'ICT': '/static/logos/logo_ICT.png',
+            'Interrent': '/static/logos/logo_ICT.png',
+            'InterRent': '/static/logos/logo_ICT.png',
+            // K
+            'KED': '/static/logos/logo_KED.png.avif',
+            'Keddy': '/static/logos/logo_KED.png.avif',
+            'KLA': '/static/logos/logo_KLA.png',
+            'Klass Wagen': '/static/logos/logo_KLA.png',
+            // L
+            'LCR': '/static/logos/logo_LCR.png',
+            'Localcar': '/static/logos/logo_LCR.png',
+            'LOC': '/static/logos/logo_LOC.png',
+            'Locauto': '/static/logos/logo_LOC.png',
+            'LOZ': '/static/logos/logo_MIL.png?v=2',
+            'Localiza': '/static/logos/logo_MIL.png?v=2',
+            'Millioncarhire': '/static/logos/logo_MIL.png?v=2',
+            'Million Car Hire': '/static/logos/logo_MIL.png?v=2',
+            // M
+            'MVY': '/static/logos/logo_MVY.png',
+            'Movyng': '/static/logos/logo_MVY.png',
+            'Mouvng': '/static/logos/logo_MVY.png',
+            // N
+            'NAT': '/static/logos/logo_NAT.png',
+            'National': '/static/logos/logo_NAT.png',
+            // O
+            'OKR': '/static/logos/logo_OKR.png',
+            'OKR1': '/static/logos/logo_OKR.png',
+            'OK Mobility': '/static/logos/logo_OKR.png',
+            'OK Mobility Não reembolsável': '/static/logos/logo_OKR.png',
+            'OK Rent a Car': '/static/logos/logo_OKR.png',
+            // P
+            'PAR': '/static/logos/logo_PAR.png',
+            'Paa': '/static/logos/logo_PAR.png',
+            // R
+            'REC': '/static/logos/logo_REC.png',
+            'Record Go': '/static/logos/logo_REC.png',
+            'RNA': '/static/logos/logo_RNA.png',
+            'Rentauto': '/static/logos/logo_RNA.png',
+            'Rentacar': '/static/logos/logo_RNA.png',
+            // S
+            'SAD': '/static/logos/logo_SAD.png',
+            'Drivalia': '/static/logos/logo_SAD.png',
+            'SEV': '/static/logos/logo_SEV.png',
+            'Sevenseas': '/static/logos/logo_SEV.png',
+            'SUR': '/static/logos/logo_SUR.png',
+            'Surprice': '/static/logos/logo_SUR.png',
+            'SVN': '/static/logos/logo_SVN.png',
+            'Sevens': '/static/logos/logo_SVN.png',
+            'Sixt': '/static/logos/logo_SXT.png',
+            'SXT': '/static/logos/logo_SXT.png',
+            // T
+            'TAN': '/static/logos/logo_TAN.png',
+            'TAN1': '/static/logos/logo_TAN1.png',
+            'Rent a Car': '/static/logos/logo_TAN1.png',
+            'Tangerine': '/static/logos/logo_TAN.png',
+            'TAX': '/static/logos/logo_TAX.png',
+            'Tax': '/static/logos/logo_TAX.png',
+            'THR': '/static/logos/logo_THR.png.avif',
+            'Thrifty': '/static/logos/logo_THR.png.avif',
+            // W
+            'WIN': '/static/logos/logo_WIN.png',
+            'Winrent': '/static/logos/logo_WIN.png',
+            'Win Rent': '/static/logos/logo_WIN.png',
+            // Y
+            'YES': '/static/logos/logo_YES.png?v=2',
+            'Yescar': '/static/logos/logo_YES.png?v=2',
+            'YesNo': '/static/logos/logo_YNOT.png?v=2',
+            'Ynot': '/static/logos/logo_YNO.png.avif?v=2',
+            'YNO': '/static/logos/logo_YNO.png.avif?v=2',
+            'YNOT': '/static/logos/logo_YNOT.png?v=2',
+            'YNO Rent a Car': '/static/logos/logo_YNO.png.avif?v=2'
+        };
+        
         function getSupplierLogo(supplierName) {
-            const supplier = (supplierName || '').toLowerCase();
+            // Tentar match direto
+            if (supplierLogoMap[supplierName]) {
+                return supplierLogoMap[supplierName];
+            }
             
-            // Map supplier names to local logo filenames (with extension variants)
-            const supplierCodeMap = {
-                'auto prudente': 'AUP.png',
-                'autoprudente': 'AUP.png',
-                'hertz': 'HER.png',
-                'avis': 'AVX.png',
-                'europcar': 'ECR.png.avif',
-                'budget': 'BGX.png.avif',
-                'sixt': 'SXT.png',
-                'enterprise': 'ENT.png',
-                'alamo': 'ALM.png.avif',
-                'thrifty': 'THR.png.avif',
-                'dollar': 'DOY.png',
-                'goldcar': 'GMO.png',
-                'firefly': 'FFX.png',
-                'green motion': 'GRE.png',
-                'record': 'REC.png',
-                'record go': 'REC.png',
-                'ok mobility': 'OKR.png',
-                'keddy': 'KED.png.avif',
-                'rhodium': 'EUR.png',
-                'flizzr': 'FLZ.png.avif',
-                'klass': 'KLA.png',
-                'seven': 'SEV.png',
-                'interrent': 'ICT.png',
-                'yes': 'YES.png',
-                'ynot': 'YNOT.png',
-                'car rental': 'CAR.png',
-                'centauro': 'CEN.png.avif',
-                'ace': 'ACE.png',
-                'america car': 'AMI.png',
-                'carhire': 'CAE.png',
-                'drivalia': 'DOH.png.avif',
-                'drive4fun': 'D4F.png.avif',
-                'addcar': 'ABB.png.avif'
-            };
-            
-            // Find matching supplier code
-            for (const [key, filename] of Object.entries(supplierCodeMap)) {
-                if (supplier.includes(key)) {
-                    return `/static/logos/logo_${filename}`;
+            // Tentar match parcial (case insensitive)
+            const nameLower = supplierName.toLowerCase();
+            for (const [key, logo] of Object.entries(supplierLogoMap)) {
+                if (key.toLowerCase() === nameLower || nameLower.includes(key.toLowerCase())) {
+                    return logo;
                 }
             }
             
-            // Default: null (will show supplier name as text)
+            // Fallback: sem logo
             return null;
         }
         
