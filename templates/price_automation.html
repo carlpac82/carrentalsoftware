@@ -3784,24 +3784,32 @@
                 supplier: c.supplier
             })));
             
-            // Find lowest price
-            let lowestPrice = null;
-            groupCars.forEach(item => {
-                const price = parseFloat(item.price_num || 0);
-                if (price > 0 && (lowestPrice === null || price < lowestPrice)) {
-                    lowestPrice = price;
-                }
-            });
+            // Sort cars by price (ascending)
+            const sortedCars = groupCars
+                .map(item => ({
+                    car: item.car,
+                    price: parseFloat(item.price_num || 0),
+                    supplier: item.supplier
+                }))
+                .filter(item => item.price > 0)
+                .sort((a, b) => a.price - b.price);
             
-            if (lowestPrice === null) {
+            if (sortedCars.length === 0) {
                 console.log(`❌ NO VALID PRICE found`);
                 return null;
             }
             
-            console.log(`3️⃣ Lowest price found: ${lowestPrice}€`);
+            // Get position from config (default: 1 = lowest)
+            const targetPosition = parseInt(config.targetPosition || 1);
+            const positionIndex = Math.min(targetPosition - 1, sortedCars.length - 1);
+            const targetCar = sortedCars[positionIndex];
+            const targetPrice = targetCar.price;
+            
+            console.log(`3️⃣ Sorted prices:`, sortedCars.slice(0, 5).map((c, i) => `${i+1}º: ${c.price.toFixed(2)}€ (${c.supplier})`));
+            console.log(`🎯 Target position: ${targetPosition} → Using ${positionIndex + 1}º place: ${targetPrice.toFixed(2)}€ (${targetCar.supplier})`);
             console.log(`4️⃣ Config:`, config);
             
-            const finalPrice = applyDifference(lowestPrice, config);
+            const finalPrice = applyDifference(targetPrice, config);
             console.log(`5️⃣ Final price after difference: ${finalPrice}€`);
             console.log(`${'='.repeat(60)}\n`);
             
@@ -3832,18 +3840,28 @@
             
             if (groupCars.length === 0) return null;
             
-            // Find lowest price among selected suppliers
-            let lowestPrice = null;
-            groupCars.forEach(item => {
-                const price = parseFloat(item.price_num || 0);
-                if (price > 0 && (lowestPrice === null || price < lowestPrice)) {
-                    lowestPrice = price;
-                }
-            });
+            // Sort cars by price (ascending)
+            const sortedCars = groupCars
+                .map(item => ({
+                    car: item.car,
+                    price: parseFloat(item.price_num || 0),
+                    supplier: item.supplier
+                }))
+                .filter(item => item.price > 0)
+                .sort((a, b) => a.price - b.price);
             
-            if (lowestPrice === null) return null;
+            if (sortedCars.length === 0) return null;
             
-            console.log(`Follow Suppliers - Group ${grupo} ${day}d: Lowest = ${lowestPrice}€ (from ${selectedSuppliers.join(', ')})`);
+            // Get position from config (default: 1 = lowest)
+            const targetPosition = parseInt(config.targetPosition || 1);
+            const positionIndex = Math.min(targetPosition - 1, sortedCars.length - 1);
+            const targetCar = sortedCars[positionIndex];
+            const targetPrice = targetCar.price;
+            
+            console.log(`Follow Suppliers - Group ${grupo} ${day}d:`);
+            console.log(`  Suppliers: ${selectedSuppliers.join(', ')}`);
+            console.log(`  Sorted prices:`, sortedCars.slice(0, 5).map((c, i) => `${i+1}º: ${c.price.toFixed(2)}€ (${c.supplier})`));
+            console.log(`  Target position: ${targetPosition} → Using ${positionIndex + 1}º: ${targetPrice.toFixed(2)}€ (${targetCar.supplier})`);
             
             // Create config with supplier-specific fields
             const supplierConfig = {
@@ -3852,7 +3870,7 @@
                 diffOperation: config.supplierDiffOperation || config.diffOperation || 'subtract'
             };
             
-            return applyDifference(lowestPrice, supplierConfig);
+            return applyDifference(targetPrice, supplierConfig);
         }
         
         async function calculateFollowAverageFromAllCars(allCarsByDay, grupo, day, config) {
