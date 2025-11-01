@@ -1507,6 +1507,37 @@ def init_db():
             )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_file_storage ON file_storage(filepath, uploaded_by)")
             
+            # Tabela para AI Learning Data (substituir localStorage)
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS ai_learning_data (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  grupo TEXT NOT NULL,
+                  days INTEGER NOT NULL,
+                  location TEXT NOT NULL,
+                  original_price REAL,
+                  new_price REAL NOT NULL,
+                  timestamp TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  user TEXT DEFAULT 'admin'
+                )
+                """
+            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_ai_learning ON ai_learning_data(grupo, days, location, timestamp DESC)")
+            
+            # Tabela para User Settings (localStorage persistente)
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS user_settings (
+                  user_key TEXT NOT NULL,
+                  setting_key TEXT NOT NULL,
+                  setting_value TEXT NOT NULL,
+                  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  PRIMARY KEY (user_key, setting_key)
+                )
+                """
+            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_user_settings ON user_settings(user_key, updated_at DESC)")
+            
         finally:
             conn.commit()
             conn.close()
@@ -8482,6 +8513,163 @@ async def load_automated_prices_history(request: Request):
                     })
                 
                 return JSONResponse({"ok": True, "history": history})
+            finally:
+                conn.close()
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+# ============================================================
+# API ENDPOINTS - AI LEARNING DATA & USER SETTINGS
+# ============================================================
+
+@app.post("/api/ai/learning/save")
+async def save_ai_learning(request: Request):
+    """Salvar dados de AI learning (ajustes manuais) na base de dados"""
+    require_auth(request)
+    
+    try:
+        data = await request.json()
+        adjustment = data.get("adjustment", {})
+        
+        with _db_lock:
+            conn = sqlite3.connect(DB_PATH)
+            try:
+                conn.execute(
+                    """
+                    INSERT INTO ai_learning_data 
+                    (grupo, days, location, original_price, new_price, user)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        adjustment.get("group"),
+                        adjustment.get("days"),
+                        adjustment.get("location"),
+                        adjustment.get("originalPrice"),
+                        adjustment.get("newPrice"),
+                        "admin"  # TODO: pegar do session
+                    )
+                )
+                conn.commit()
+                
+                logging.info(f"✅ AI Learning saved: {adjustment.get('group')}/{adjustment.get('days')}d = {adjustment.get('newPrice')}€")
+                return JSONResponse({"ok": True})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ Error saving AI learning: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/ai/learning/load")
+async def load_ai_learning(request: Request):
+    """Carregar dados de AI learning da base de dados"""
+    require_auth(request)
+    
+    try:
+        location = request.query_params.get("location")
+        limit = int(request.query_params.get("limit", 100))
+        
+        with _db_lock:
+            conn = sqlite3.connect(DB_PATH)
+            try:
+                query = "SELECT grupo, days, location, original_price, new_price, timestamp FROM ai_learning_data WHERE 1=1"
+                params = []
+                
+                if location:
+                    query += " AND location = ?"
+                    params.append(location)
+                
+                query += " ORDER BY timestamp DESC LIMIT ?"
+                params.append(limit)
+                
+                cursor = conn.execute(query, params)
+                rows = cursor.fetchall()
+                
+                adjustments = []
+                for row in rows:
+                    adjustments.append({
+                        "group": row[0],
+                        "days": row[1],
+                        "location": row[2],
+                        "originalPrice": row[3],
+                        "newPrice": row[4],
+                        "timestamp": row[5]
+                    })
+                
+                return JSONResponse({"ok": True, "adjustments": adjustments})
+            finally:
+                conn.close()
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.post("/api/user-settings/save")
+async def save_user_settings(request: Request):
+    """Salvar configurações do usuário (substituir localStorage)"""
+    require_auth(request)
+    
+    try:
+        data = await request.json()
+        user_key = data.get("user_key", "default")
+        settings = data.get("settings", {})
+        
+        with _db_lock:
+            conn = sqlite3.connect(DB_PATH)
+            try:
+                for key, value in settings.items():
+                    # Serializar valor como JSON
+                    value_json = json.dumps(value) if not isinstance(value, str) else value
+                    
+                    conn.execute(
+                        """
+                        INSERT OR REPLACE INTO user_settings 
+                        (user_key, setting_key, setting_value, updated_at)
+                        VALUES (?, ?, ?, datetime('now'))
+                        """,
+                        (user_key, key, value_json)
+                    )
+                
+                conn.commit()
+                logging.info(f"✅ User settings saved: {len(settings)} keys for {user_key}")
+                return JSONResponse({"ok": True})
+            finally:
+                conn.close()
+    except Exception as e:
+        logging.error(f"❌ Error saving user settings: {str(e)}")
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+@app.get("/api/user-settings/load")
+async def load_user_settings(request: Request):
+    """Carregar configurações do usuário da base de dados"""
+    require_auth(request)
+    
+    try:
+        user_key = request.query_params.get("user_key", "default")
+        
+        with _db_lock:
+            conn = sqlite3.connect(DB_PATH)
+            try:
+                cursor = conn.execute(
+                    """
+                    SELECT setting_key, setting_value 
+                    FROM user_settings 
+                    WHERE user_key = ?
+                    ORDER BY updated_at DESC
+                    """,
+                    (user_key,)
+                )
+                rows = cursor.fetchall()
+                
+                settings = {}
+                for row in rows:
+                    key = row[0]
+                    value_str = row[1]
+                    
+                    # Tentar deserializar JSON
+                    try:
+                        settings[key] = json.loads(value_str)
+                    except:
+                        settings[key] = value_str
+                
+                return JSONResponse({"ok": True, "settings": settings})
             finally:
                 conn.close()
     except Exception as e:
