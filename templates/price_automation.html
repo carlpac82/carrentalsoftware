@@ -844,7 +844,7 @@
                                 </svg>
                                 <span class="whitespace-nowrap">Quick</span>
                             </button>
-                            <button onclick="runDeepScan()" class="px-3 py-2 bg-[#f4ad0f] text-white rounded hover:bg-[#e09d0a] transition-colors flex items-center justify-center gap-1.5 text-sm font-medium" title="Deep Scan: Analyze 24 months + all days">
+                            <button onclick="runDeepScan()" class="px-3 py-2 bg-[#f4ad0f] text-white rounded hover:bg-[#e09d0a] transition-colors flex items-center justify-center gap-1.5 text-sm font-medium" title="Deep Scan: Analyze next 24 months + all rental periods">
                                 <svg class="w-4 h-4 flex-shrink-0" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7"/>
                                 </svg>
@@ -3979,7 +3979,7 @@
         }
         
         async function runDeepScan() {
-            console.log('🔍 Starting Deep Scan - 24 months analysis...');
+            console.log('🔍 Starting Deep Scan - next 24 months (future) analysis...');
             
             const referenceSupplier = document.getElementById('aiReferenceSupplier').value;
             
@@ -3987,7 +3987,7 @@
             const locations = ['Albufeira', 'Aeroporto de Faro'];
             
             // Confirm with user
-            if (!confirm(`Deep Scan will analyze:\n\n• Last 24 months\n• All rental periods (1-60 days)\n• BOTH locations: Albufeira AND Aeroporto de Faro\n• ALL suppliers in each location\n• Compare ${referenceSupplier} positioning\n\nThis may take several minutes. Continue?`)) {
+            if (!confirm(`Deep Scan will analyze:\n\n• Next 24 months (future dates)\n• All rental periods (1-60 days)\n• BOTH locations: Albufeira AND Aeroporto de Faro\n• ALL suppliers in each location\n• Compare ${referenceSupplier} positioning\n\nThis may take several minutes. Continue?`)) {
                 return;
             }
             
@@ -4001,10 +4001,11 @@
             let totalSearches = 0;
             let completedSearches = 0;
             
-            // Calculate date range (last 24 months)
-            const endDate = new Date();
+            // Calculate date range (next 24 months - FUTURE dates only)
             const startDate = new Date();
-            startDate.setMonth(startDate.getMonth() - 24);
+            startDate.setDate(startDate.getDate() + 1); // Tomorrow (scraping starts from tomorrow)
+            const endDate = new Date();
+            endDate.setMonth(endDate.getMonth() + 24); // +24 months into future
             
             // Days to analyze
             const daysToAnalyze = [1, 2, 3, 4, 5, 6, 7, 14, 21, 30, 60];
@@ -4109,7 +4110,7 @@
                     await new Promise(resolve => setTimeout(resolve, 100));
                 }
                 
-                console.log(`✅ Deep Scan complete: ${allResults.length} results collected`);
+                console.log(`✅ Deep Scan complete: ${allResults.length} future price points collected`);
                 
                 // Analyze results
                 loadingState.innerHTML = `
@@ -4154,7 +4155,7 @@
                 loadingState.classList.add('hidden');
                 
                 const supplierInfo = analysisData.totalSuppliers ? ` across ${analysisData.totalSuppliers} suppliers` : '';
-                showNotification(`Deep Scan complete! Analyzed ${analysisData.dataPoints} price comparisons${supplierInfo} over 24 months.`, 'success');
+                showNotification(`Deep Scan complete! Analyzed ${analysisData.dataPoints} future price comparisons${supplierInfo} over next 24 months.`, 'success');
                 
             } catch (error) {
                 console.error('Deep Scan error:', error);
