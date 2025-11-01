@@ -1561,6 +1561,86 @@ def init_db():
             )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_user_settings ON user_settings(user_key, updated_at DESC)")
             
+            # Tabela para Commercial Vans Pricing (C3, C4, C5)
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS vans_pricing (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  c3_1day REAL DEFAULT 112.00,
+                  c3_2days REAL DEFAULT 144.00,
+                  c3_3days REAL DEFAULT 180.00,
+                  c4_1day REAL DEFAULT 152.00,
+                  c4_2days REAL DEFAULT 170.00,
+                  c4_3days REAL DEFAULT 210.00,
+                  c5_1day REAL DEFAULT 175.00,
+                  c5_2days REAL DEFAULT 190.00,
+                  c5_3days REAL DEFAULT 240.00,
+                  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  updated_by TEXT DEFAULT 'admin'
+                )
+                """
+            )
+            
+            # Tabela para Automated Price Rules
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS automated_price_rules (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  location TEXT NOT NULL,
+                  grupo TEXT NOT NULL,
+                  month INTEGER NOT NULL,
+                  day INTEGER NOT NULL,
+                  strategy_type TEXT NOT NULL,
+                  config TEXT NOT NULL,
+                  priority INTEGER DEFAULT 1,
+                  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  UNIQUE(location, grupo, month, day, priority)
+                )
+                """
+            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_automated_rules ON automated_price_rules(location, grupo, month, day)")
+            
+            # Tabela para Price Automation Settings
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS price_automation_settings (
+                  setting_key TEXT PRIMARY KEY,
+                  setting_value TEXT NOT NULL,
+                  setting_type TEXT DEFAULT 'string',
+                  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+            
+            # Tabela para Custom Days Configuration
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS custom_days (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  days_array TEXT NOT NULL,
+                  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+                )
+                """
+            )
+            
+            # Tabela para Price History (versões salvas)
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS price_history (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  history_type TEXT NOT NULL,
+                  year INTEGER NOT NULL,
+                  month INTEGER NOT NULL,
+                  location TEXT NOT NULL,
+                  prices_data TEXT NOT NULL,
+                  saved_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  saved_by TEXT DEFAULT 'admin'
+                )
+                """
+            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_price_history ON price_history(history_type, year, month, location, saved_at DESC)")
+            
         finally:
             conn.commit()
             conn.close()
@@ -10295,6 +10375,187 @@ async def download_export_history(request: Request, export_id: int):
                         "Content-Disposition": f'attachment; filename="{filename}"'
                     }
                 )
+            finally:
+                con.close()
+    except Exception as e:
+        import traceback
+        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+
+# ============================================================
+# API ENDPOINTS - LOCALSTORAGE MIGRATION
+# ============================================================
+
+@app.get("/api/vans-pricing")
+async def get_vans_pricing(request: Request):
+    """Get Commercial Vans pricing (C3, C4, C5)"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            con = _db_connect()
+            try:
+                cursor = con.execute("SELECT * FROM vans_pricing ORDER BY id DESC LIMIT 1")
+                row = cursor.fetchone()
+                
+                if row:
+                    return _no_store_json({
+                        "ok": True,
+                        "pricing": {
+                            "c3_1day": row[1], "c3_2days": row[2], "c3_3days": row[3],
+                            "c4_1day": row[4], "c4_2days": row[5], "c4_3days": row[6],
+                            "c5_1day": row[7], "c5_2days": row[8], "c5_3days": row[9],
+                            "updated_at": row[10]
+                        }
+                    })
+                else:
+                    # Return defaults
+                    return _no_store_json({
+                        "ok": True,
+                        "pricing": {
+                            "c3_1day": 112, "c3_2days": 144, "c3_3days": 180,
+                            "c4_1day": 152, "c4_2days": 170, "c4_3days": 210,
+                            "c5_1day": 175, "c5_2days": 190, "c5_3days": 240
+                        }
+                    })
+            finally:
+                con.close()
+    except Exception as e:
+        import traceback
+        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+
+@app.post("/api/vans-pricing")
+async def save_vans_pricing(request: Request):
+    """Save Commercial Vans pricing"""
+    require_auth(request)
+    try:
+        data = await request.json()
+        user = request.session.get('user', 'admin')
+        
+        with _db_lock:
+            con = _db_connect()
+            try:
+                con.execute("""
+                    INSERT INTO vans_pricing (
+                        c3_1day, c3_2days, c3_3days,
+                        c4_1day, c4_2days, c4_3days,
+                        c5_1day, c5_2days, c5_3days,
+                        updated_by
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    data.get('c3_1day', 112), data.get('c3_2days', 144), data.get('c3_3days', 180),
+                    data.get('c4_1day', 152), data.get('c4_2days', 170), data.get('c4_3days', 210),
+                    data.get('c5_1day', 175), data.get('c5_2days', 190), data.get('c5_3days', 240),
+                    user
+                ))
+                con.commit()
+                return _no_store_json({"ok": True, "message": "Vans pricing saved successfully"})
+            finally:
+                con.close()
+    except Exception as e:
+        import traceback
+        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+
+@app.get("/api/automation-settings")
+async def get_automation_settings(request: Request):
+    """Get price automation settings"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            con = _db_connect()
+            try:
+                cursor = con.execute("SELECT setting_key, setting_value, setting_type FROM price_automation_settings")
+                rows = cursor.fetchall()
+                
+                settings = {}
+                for row in rows:
+                    key, value, stype = row
+                    if stype == 'json':
+                        import json
+                        settings[key] = json.loads(value)
+                    elif stype == 'number':
+                        settings[key] = float(value)
+                    else:
+                        settings[key] = value
+                
+                return _no_store_json({"ok": True, "settings": settings})
+            finally:
+                con.close()
+    except Exception as e:
+        import traceback
+        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+
+@app.post("/api/automation-settings")
+async def save_automation_settings(request: Request):
+    """Save price automation settings"""
+    require_auth(request)
+    try:
+        data = await request.json()
+        
+        with _db_lock:
+            con = _db_connect()
+            try:
+                for key, value in data.items():
+                    import json
+                    if isinstance(value, (list, dict)):
+                        value_str = json.dumps(value)
+                        stype = 'json'
+                    elif isinstance(value, (int, float)):
+                        value_str = str(value)
+                        stype = 'number'
+                    else:
+                        value_str = str(value)
+                        stype = 'string'
+                    
+                    con.execute("""
+                        INSERT OR REPLACE INTO price_automation_settings (setting_key, setting_value, setting_type, updated_at)
+                        VALUES (?, ?, ?, CURRENT_TIMESTAMP)
+                    """, (key, value_str, stype))
+                
+                con.commit()
+                return _no_store_json({"ok": True, "message": "Settings saved successfully"})
+            finally:
+                con.close()
+    except Exception as e:
+        import traceback
+        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+
+@app.get("/api/custom-days")
+async def get_custom_days(request: Request):
+    """Get custom days configuration"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            con = _db_connect()
+            try:
+                cursor = con.execute("SELECT days_array FROM custom_days ORDER BY id DESC LIMIT 1")
+                row = cursor.fetchone()
+                
+                if row:
+                    import json
+                    return _no_store_json({"ok": True, "days": json.loads(row[0])})
+                else:
+                    # Default days
+                    return _no_store_json({"ok": True, "days": [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60]})
+            finally:
+                con.close()
+    except Exception as e:
+        import traceback
+        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+
+@app.post("/api/custom-days")
+async def save_custom_days(request: Request):
+    """Save custom days configuration"""
+    require_auth(request)
+    try:
+        data = await request.json()
+        days = data.get('days', [])
+        
+        import json
+        with _db_lock:
+            con = _db_connect()
+            try:
+                con.execute("INSERT INTO custom_days (days_array) VALUES (?)", (json.dumps(days),))
+                con.commit()
+                return _no_store_json({"ok": True, "message": "Custom days saved successfully"})
             finally:
                 con.close()
     except Exception as e:
