@@ -3645,14 +3645,13 @@ async def track_by_params(request: Request):
             elif 'albufeira' in location.lower():
                 carjet_location = 'Albufeira Cidade'  # Nome EXATO do CarJet (sem código)
             
-            # Configurar Chrome COM INTERFACE VISUAL (para debug)
+            # Configurar Chrome headless
             chrome_options = Options()
-            # chrome_options.add_argument('--headless')  # DESATIVADO para ver o que acontece
+            chrome_options.add_argument('--headless')  # Headless para produção
             chrome_options.add_argument('--no-sandbox')
             chrome_options.add_argument('--disable-dev-shm-usage')
-            # chrome_options.add_argument('--disable-gpu')
+            chrome_options.add_argument('--disable-gpu')
             chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36')
-            chrome_options.add_argument('--start-maximized')  # Maximizar janela
             
             # Iniciar driver
             driver = webdriver.Chrome(
