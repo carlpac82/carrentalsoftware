@@ -3976,10 +3976,32 @@
             
             // Update labels
             updateAILabels();
+            
+            // Re-run last analysis if one was already executed
+            const lastAnalysisType = localStorage.getItem('lastAIAnalysisType');
+            const insightsContainer = document.getElementById('aiInsightsByGroup');
+            
+            // Only re-run if there was a previous analysis
+            if (lastAnalysisType && insightsContainer.innerHTML.trim() !== '') {
+                console.log(`🔄 Settings changed - re-running ${lastAnalysisType} analysis...`);
+                
+                // Re-execute the last analysis type
+                if (lastAnalysisType === 'smart') {
+                    runSmartAnalysis();
+                } else if (lastAnalysisType === 'quick') {
+                    runAIAnalysis();
+                } else if (lastAnalysisType === 'deep') {
+                    // Don't auto-run deep scan (too expensive)
+                    showNotification('Settings changed. Click Deep Scan button to re-run analysis.', 'info', 3000);
+                }
+            }
         }
         
         async function runDeepScan() {
             console.log('🔍 Starting Deep Scan - next 24 months (future) analysis...');
+            
+            // Save analysis type (but don't auto-re-run, too expensive)
+            localStorage.setItem('lastAIAnalysisType', 'deep');
             
             const referenceSupplier = document.getElementById('aiReferenceSupplier').value;
             
@@ -4504,6 +4526,9 @@ Continue?`);
         async function runAIAnalysis() {
             console.log('🤖 Starting AI Analysis...');
             
+            // Save analysis type for auto-refresh
+            localStorage.setItem('lastAIAnalysisType', 'quick');
+            
             const loadingState = document.getElementById('aiLoadingState');
             const insightsContainer = document.getElementById('aiInsightsByGroup');
             
@@ -4901,6 +4926,9 @@ Continue?`);
          */
         async function runSmartAnalysis() {
             console.log('🌟 Starting Smart Analysis...');
+            
+            // Save analysis type for auto-refresh
+            localStorage.setItem('lastAIAnalysisType', 'smart');
             
             const loadingState = document.getElementById('aiLoadingState');
             const insightsContainer = document.getElementById('aiInsightsByGroup');
