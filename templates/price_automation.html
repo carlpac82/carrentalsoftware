@@ -3876,9 +3876,22 @@
             
             console.log(`✅ Way2Rentals CSV exported: ${filename}`);
             showNotification(`✅ Way2Rentals CSV exported: ${filename}`, 'success');
+            
+            // Save to database for history
+            saveExportToHistory({
+                filename: filename,
+                broker: 'way2rentals',
+                location: document.getElementById('location')?.value || 'Unknown',
+                period_start: parseInt(startDay),
+                period_end: parseInt(endDay),
+                month: date ? parseInt(date.split('-')[1]) : new Date().getMonth() + 1,
+                year: date ? parseInt(date.split('-')[0]) : new Date().getFullYear(),
+                month_name: monthName,
+                file_content: csvContent
+            });
         }
-
-        function generateHistoryMonths() {
+        
+        function renderSmartInsights(insights) {
             const containerCurrent = document.getElementById('historyMonthsCurrent');
             const containerAutomated = document.getElementById('historyMonthsAutomated');
             containerCurrent.innerHTML = '';

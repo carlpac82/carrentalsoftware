@@ -1507,6 +1507,29 @@ def init_db():
             )
             conn.execute("CREATE INDEX IF NOT EXISTS idx_file_storage ON file_storage(filepath, uploaded_by)")
             
+            # Tabela para histórico de exports (Way2Rentals, Abbycar, etc.)
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS export_history (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  filename TEXT NOT NULL,
+                  broker TEXT NOT NULL,
+                  location TEXT NOT NULL,
+                  period_start INTEGER,
+                  period_end INTEGER,
+                  month INTEGER NOT NULL,
+                  year INTEGER NOT NULL,
+                  month_name TEXT NOT NULL,
+                  file_content TEXT NOT NULL,
+                  file_size INTEGER,
+                  exported_by TEXT,
+                  export_date TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                  last_downloaded TEXT
+                )
+                """
+            )
+            conn.execute("CREATE INDEX IF NOT EXISTS idx_export_history ON export_history(broker, location, year, month, export_date)")
+            
             # Tabela para AI Learning Data (substituir localStorage)
             conn.execute(
                 """
@@ -10108,6 +10131,172 @@ async def import_config(request: Request):
             "message": "Configuração importada com sucesso",
             "imported": imported
         })
+    except Exception as e:
+        import traceback
+        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+
+# ============================================================
+# EXPORT HISTORY - Way2Rentals, Abbycar, etc.
+# ============================================================
+
+@app.post("/api/export-history/save")
+async def save_export_history(request: Request):
+    """Salva export na database para histórico"""
+    require_auth(request)
+    try:
+        body = await request.json()
+        
+        filename = body.get("filename", "")
+        broker = body.get("broker", "")
+        location = body.get("location", "")
+        period_start = body.get("period_start")
+        period_end = body.get("period_end")
+        month = body.get("month", 0)
+        year = body.get("year", 0)
+        month_name = body.get("month_name", "")
+        file_content = body.get("file_content", "")
+        file_size = len(file_content)
+        
+        username = request.session.get("username", "unknown")
+        
+        with _db_lock:
+            con = _db_connect()
+            try:
+                con.execute("""
+                    INSERT INTO export_history 
+                    (filename, broker, location, period_start, period_end, month, year, month_name, 
+                     file_content, file_size, exported_by, export_date)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))
+                """, (filename, broker, location, period_start, period_end, month, year, 
+                      month_name, file_content, file_size, username))
+                con.commit()
+                
+                export_id = con.execute("SELECT last_insert_rowid()").fetchone()[0]
+                
+                # Cleanup: Manter apenas últimos 12 meses
+                cutoff_date = f"{year - 1}-{month:02d}-01"
+                con.execute("""
+                    DELETE FROM export_history 
+                    WHERE export_date < ?
+                """, (cutoff_date,))
+                con.commit()
+                
+                return _no_store_json({
+                    "ok": True,
+                    "export_id": export_id,
+                    "message": "Export saved successfully"
+                })
+            finally:
+                con.close()
+    except Exception as e:
+        import traceback
+        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+
+@app.get("/api/export-history/list")
+async def list_export_history(request: Request):
+    """Lista exports salvos (últimos 12 meses)"""
+    require_auth(request)
+    try:
+        broker = request.query_params.get("broker")
+        location = request.query_params.get("location")
+        year = request.query_params.get("year")
+        month = request.query_params.get("month")
+        
+        query = """
+            SELECT id, filename, broker, location, period_start, period_end, 
+                   month, year, month_name, file_size, exported_by, export_date, last_downloaded
+            FROM export_history
+            WHERE 1=1
+        """
+        params = []
+        
+        if broker:
+            query += " AND broker = ?"
+            params.append(broker)
+        if location:
+            query += " AND location = ?"
+            params.append(location)
+        if year:
+            query += " AND year = ?"
+            params.append(int(year))
+        if month:
+            query += " AND month = ?"
+            params.append(int(month))
+        
+        query += " ORDER BY year DESC, month DESC, export_date DESC"
+        
+        with _db_lock:
+            con = _db_connect()
+            try:
+                rows = con.execute(query, params).fetchall()
+                
+                exports = []
+                for row in rows:
+                    exports.append({
+                        "id": row[0],
+                        "filename": row[1],
+                        "broker": row[2],
+                        "location": row[3],
+                        "period_start": row[4],
+                        "period_end": row[5],
+                        "month": row[6],
+                        "year": row[7],
+                        "month_name": row[8],
+                        "file_size": row[9],
+                        "exported_by": row[10],
+                        "export_date": row[11],
+                        "last_downloaded": row[12]
+                    })
+                
+                return _no_store_json({
+                    "ok": True,
+                    "exports": exports,
+                    "total": len(exports)
+                })
+            finally:
+                con.close()
+    except Exception as e:
+        import traceback
+        return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
+
+@app.get("/api/export-history/download/{export_id}")
+async def download_export_history(request: Request, export_id: int):
+    """Download de export salvo"""
+    require_auth(request)
+    try:
+        with _db_lock:
+            con = _db_connect()
+            try:
+                row = con.execute("""
+                    SELECT filename, file_content, broker
+                    FROM export_history
+                    WHERE id = ?
+                """, (export_id,)).fetchone()
+                
+                if not row:
+                    return _no_store_json({"ok": False, "error": "Export not found"}, 404)
+                
+                filename, file_content, broker = row
+                
+                # Update last_downloaded
+                con.execute("""
+                    UPDATE export_history
+                    SET last_downloaded = datetime('now')
+                    WHERE id = ?
+                """, (export_id,))
+                con.commit()
+                
+                # Return CSV file
+                from starlette.responses import Response
+                return Response(
+                    content=file_content,
+                    media_type="text/csv",
+                    headers={
+                        "Content-Disposition": f'attachment; filename="{filename}"'
+                    }
+                )
+            finally:
+                con.close()
     except Exception as e:
         import traceback
         return _no_store_json({"ok": False, "error": str(e), "traceback": traceback.format_exc()}, 500)
