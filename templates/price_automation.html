@@ -175,6 +175,9 @@
             color: #1f2937;
         }
     </style>
+    
+    <!-- Database Sync - Persistência automática -->
+    <script src="/static/js/db-sync.js"></script>
 </head>
 <body class="bg-gray-50">
     <header class="bg-[#009cb6] border-b">
@@ -2187,10 +2190,17 @@
                 aiData.adjustments = aiData.adjustments.slice(-100);
             }
             
-            // Save
+            // Save to localStorage
             localStorage.setItem('priceAIData', JSON.stringify(aiData));
             
             console.log(`✅ AI data saved. Total adjustments: ${aiData.adjustments.length}`);
+            
+            // Also save to database for persistence
+            if (window.dbSync && window.dbSync.saveAIAdjustment) {
+                window.dbSync.saveAIAdjustment(adjustment).catch(err => {
+                    console.warn('⚠️ Failed to save to database:', err);
+                });
+            }
         }
         
         // Mapa completo de logos (mesmo do index.html)
