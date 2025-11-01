@@ -2196,44 +2196,47 @@
         function getSupplierLogo(supplierName) {
             const supplier = (supplierName || '').toLowerCase();
             
-            // Map supplier names to local logo filenames
+            // Map supplier names to local logo filenames (with extension variants)
             const supplierCodeMap = {
-                'auto prudente': 'AUP',
-                'autoprudente': 'AUP',
-                'hertz': 'HER',
-                'avis': 'AVX',
-                'europcar': 'ECR',
-                'budget': 'BGX',
-                'sixt': 'SXT',
-                'enterprise': 'ENT',
-                'alamo': 'ALM',
-                'thrifty': 'THR',
-                'dollar': 'DOY',
-                'goldcar': 'GMO',
-                'firefly': 'FFX',
-                'green motion': 'GRE',
-                'record': 'REC',
-                'record go': 'REC',
-                'ok mobility': 'OKR',
-                'keddy': 'KED',
-                'rhodium': 'EUR',
-                'flizzr': 'FLZ',
-                'klass': 'KLA',
-                'seven': 'SEV',
-                'interrent': 'ICT',
-                'yes': 'YES',
-                'ynot': 'YNOT',
-                'car rental': 'CAR',
-                'centauro': 'CEN',
-                'ace': 'ACE',
-                'america car': 'AMI',
-                'carhire': 'CAE'
+                'auto prudente': 'AUP.png',
+                'autoprudente': 'AUP.png',
+                'hertz': 'HER.png',
+                'avis': 'AVX.png',
+                'europcar': 'ECR.png.avif',
+                'budget': 'BGX.png.avif',
+                'sixt': 'SXT.png',
+                'enterprise': 'ENT.png',
+                'alamo': 'ALM.png.avif',
+                'thrifty': 'THR.png.avif',
+                'dollar': 'DOY.png',
+                'goldcar': 'GMO.png',
+                'firefly': 'FFX.png',
+                'green motion': 'GRE.png',
+                'record': 'REC.png',
+                'record go': 'REC.png',
+                'ok mobility': 'OKR.png',
+                'keddy': 'KED.png.avif',
+                'rhodium': 'EUR.png',
+                'flizzr': 'FLZ.png.avif',
+                'klass': 'KLA.png',
+                'seven': 'SEV.png',
+                'interrent': 'ICT.png',
+                'yes': 'YES.png',
+                'ynot': 'YNOT.png',
+                'car rental': 'CAR.png',
+                'centauro': 'CEN.png.avif',
+                'ace': 'ACE.png',
+                'america car': 'AMI.png',
+                'carhire': 'CAE.png',
+                'drivalia': 'DOH.png.avif',
+                'drive4fun': 'D4F.png.avif',
+                'addcar': 'ABB.png.avif'
             };
             
             // Find matching supplier code
-            for (const [key, code] of Object.entries(supplierCodeMap)) {
+            for (const [key, filename] of Object.entries(supplierCodeMap)) {
                 if (supplier.includes(key)) {
-                    return `/static/logos/logo_${code}.png`;
+                    return `/static/logos/logo_${filename}`;
                 }
             }
             
