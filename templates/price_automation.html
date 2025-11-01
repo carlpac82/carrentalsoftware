@@ -436,7 +436,29 @@
                             </select>
                         </div>
                     </div>
+                    
+                    <!-- Visual Period Timeline -->
+                    <div id="periodTimelineContainer" class="hidden mt-4 p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <h3 class="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                                <svg class="w-5 h-5 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                                </svg>
+                                Detected Price Periods
+                            </h3>
+                            <span id="periodCount" class="text-xs bg-[#009cb6] text-white px-2 py-1 rounded-full">0 periods</span>
+                        </div>
+                        <div id="periodTimeline" class="space-y-2">
+                            <!-- Will be populated by JS -->
+                        </div>
+                    </div>
+                    
                     <div class="flex items-end gap-2">
+                        <button id="btnAIPriceSuggestions" onclick="showAIPriceSuggestions()" class="p-2 hover:bg-gray-100 rounded transition-colors" title="AI Price Suggestions based on detected periods">
+                            <svg class="w-6 h-6 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                            </svg>
+                        </button>
                         <button id="btnGenerateAuto" onclick="generateAutomatedPrices()" class="p-2 hover:bg-gray-100 rounded transition-colors" title="Generate automated prices">
                             <svg class="w-6 h-6 text-[#f4ad0f] generate-icon" fill="currentColor" viewBox="0 0 24 24">
                                 <path d="M13 10V3L4 14h7v7l9-11h-7z"/>
@@ -789,6 +811,93 @@
                         <span class="font-medium">Powered by AI</span> • Real-time market intelligence
                     </div>
                     <button onclick="closeAIInsights()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- AI PRICE SUGGESTIONS MODAL -->
+        <div id="aiPriceSuggestionsModal" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+            <div class="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden flex flex-col">
+                <!-- Header -->
+                <div class="bg-gradient-to-r from-[#009cb6] to-[#0077b6] text-white p-6">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                            </svg>
+                            <div>
+                                <h2 class="text-2xl font-bold">AI Price Suggestions</h2>
+                                <p class="text-sm opacity-90">Based on detected pricing periods and market analysis</p>
+                            </div>
+                        </div>
+                        <button onclick="closeAIPriceSuggestions()" class="text-white hover:bg-white hover:bg-opacity-20 rounded p-2 transition-colors">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Content -->
+                <div class="flex-1 overflow-y-auto p-6">
+                    <!-- Period Selection -->
+                    <div class="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg p-4 mb-6 border border-blue-200">
+                        <div class="flex items-center gap-3 mb-3">
+                            <svg class="w-6 h-6 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                            </svg>
+                            <h3 class="text-lg font-semibold text-gray-900">Select Period for Analysis</h3>
+                        </div>
+                        <div class="grid grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Location</label>
+                                <select id="aiSuggestLocation" class="w-full px-3 py-2 border border-gray-300 rounded" onchange="loadAIPeriods()">
+                                    <option value="Albufeira">Albufeira</option>
+                                    <option value="Aeroporto de Faro">Aeroporto de Faro</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Date Selection</label>
+                                <select id="aiSuggestDateType" class="w-full px-3 py-2 border border-gray-300 rounded" onchange="updateAISuggestDateSelection()">
+                                    <option value="month">By Month</option>
+                                    <option value="year">By Year</option>
+                                    <option value="period">By Price Period</option>
+                                </select>
+                            </div>
+                            <div id="aiSuggestDatePicker">
+                                <!-- Will be populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Pricing Periods Timeline -->
+                    <div id="aiPeriodsTimeline" class="mb-6">
+                        <!-- Will be populated by JS -->
+                    </div>
+                    
+                    <!-- AI Suggestions Grid -->
+                    <div id="aiSuggestionsGrid" class="grid grid-cols-2 gap-4">
+                        <!-- Will be populated by JS -->
+                    </div>
+                    
+                    <!-- Empty State -->
+                    <div id="aiSuggestionsEmpty" class="text-center py-12">
+                        <svg class="w-16 h-16 mx-auto text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                        </svg>
+                        <p class="text-gray-500 mt-4 text-lg">Run Calendar Scan first to get AI price suggestions</p>
+                        <p class="text-gray-400 text-sm mt-2">The AI will analyze pricing periods and suggest optimal prices for each group</p>
+                    </div>
+                </div>
+                
+                <!-- Footer -->
+                <div class="bg-gray-50 border-t p-4 flex items-center justify-between">
+                    <div class="text-xs text-gray-500">
+                        <span class="font-medium">AI-Powered Pricing</span> • Based on historical data and market trends
+                    </div>
+                    <button onclick="closeAIPriceSuggestions()" class="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors">
                         Close
                     </button>
                 </div>
@@ -4412,6 +4521,338 @@ Continue?`);
                     avgPrice: avgPrice,
                     description: `Period ${periodIndex + 1}: ${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()} (${period.duration_days} days)`
                 };
+            }
+        }
+        
+        // ===== AI PRICE SUGGESTIONS FUNCTIONS =====
+        
+        function showAIPriceSuggestions() {
+            const modal = document.getElementById('aiPriceSuggestionsModal');
+            modal.classList.remove('hidden');
+            
+            // Initialize
+            updateAISuggestDateSelection();
+            loadAIPeriods();
+            generateAIPriceSuggestions();
+        }
+        
+        function closeAIPriceSuggestions() {
+            document.getElementById('aiPriceSuggestionsModal').classList.add('hidden');
+        }
+        
+        function updateAISuggestDateSelection() {
+            const dateType = document.getElementById('aiSuggestDateType').value;
+            const datePickerDiv = document.getElementById('aiSuggestDatePicker');
+            
+            let html = '';
+            if (dateType === 'month') {
+                html = `
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Select Month</label>
+                    <input type="month" id="aiSuggestMonthPicker" class="w-full px-3 py-2 border border-gray-300 rounded" onchange="generateAIPriceSuggestions()">
+                `;
+            } else if (dateType === 'year') {
+                const currentYear = new Date().getFullYear();
+                html = `
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Select Year</label>
+                    <select id="aiSuggestYearPicker" class="w-full px-3 py-2 border border-gray-300 rounded" onchange="generateAIPriceSuggestions()">
+                        ${[0,1,2].map(i => `<option value="${currentYear + i}">${currentYear + i}</option>`).join('')}
+                    </select>
+                `;
+            } else if (dateType === 'period') {
+                html = `
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Price Period</label>
+                    <select id="aiSuggestPeriodPicker" class="w-full px-3 py-2 border border-gray-300 rounded" onchange="generateAIPriceSuggestions()">
+                        <option value="">Loading periods...</option>
+                    </select>
+                `;
+            }
+            
+            datePickerDiv.innerHTML = html;
+            
+            // Initialize month picker with current month
+            if (dateType === 'month') {
+                const now = new Date();
+                const monthInput = document.getElementById('aiSuggestMonthPicker');
+                if (monthInput) {
+                    monthInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+                }
+            }
+            
+            if (dateType === 'period') {
+                loadAIPeriods();
+            }
+        }
+        
+        function loadAIPeriods() {
+            const history = JSON.parse(localStorage.getItem('calendarScansHistory') || '[]');
+            const periodPicker = document.getElementById('aiSuggestPeriodPicker');
+            
+            if (!periodPicker) return;
+            
+            if (history.length === 0) {
+                periodPicker.innerHTML = '<option value="">Run Calendar Scan first</option>';
+                return;
+            }
+            
+            const latestScan = history[0];
+            const periods = latestScan.periods || [];
+            
+            if (periods.length === 0) {
+                periodPicker.innerHTML = '<option value="">No periods detected</option>';
+                return;
+            }
+            
+            let options = '<option value="">Select a period...</option>';
+            periods.forEach((period, index) => {
+                const startDate = new Date(period.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const endDate = new Date(period.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                const priceLevel = period.avg_price > 30 ? 'High' : period.avg_price > 25 ? 'Mid' : 'Low';
+                
+                options += `<option value="${index}">Period ${index + 1}: ${startDate} - ${endDate} (${priceLevel} Season @ ${period.avg_price}€)</option>`;
+            });
+            
+            periodPicker.innerHTML = options;
+            
+            // Show periods timeline
+            displayPeriodsTimeline(periods);
+        }
+        
+        function displayPeriodsTimeline(periods) {
+            const timeline = document.getElementById('aiPeriodsTimeline');
+            if (!timeline) return;
+            
+            if (!periods || periods.length === 0) {
+                timeline.innerHTML = '';
+                return;
+            }
+            
+            let html = `
+                <div class="bg-white border border-gray-200 rounded-lg p-4">
+                    <h4 class="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <svg class="w-4 h-4 text-[#009cb6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/>
+                        </svg>
+                        Detected Pricing Periods (${periods.length})
+                    </h4>
+                    <div class="space-y-2">
+            `;
+            
+            periods.forEach((period, index) => {
+                const startDate = new Date(period.start).toLocaleDateString();
+                const endDate = new Date(period.end).toLocaleDateString();
+                const priceLevel = period.avg_price > 30 ? 'High' : period.avg_price > 25 ? 'Mid' : 'Low';
+                const priceColor = period.avg_price > 30 ? 'bg-red-100 text-red-700' : period.avg_price > 25 ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700';
+                
+                html += `
+                    <div class="flex items-center gap-3 p-2 bg-gray-50 rounded border border-gray-200 hover:border-[#009cb6] transition-colors">
+                        <div class="flex-shrink-0 w-16 text-center">
+                            <div class="text-xs font-medium text-gray-500">Period ${index + 1}</div>
+                            <div class="text-xs text-gray-400">${period.duration_days}d</div>
+                        </div>
+                        <div class="flex-1">
+                            <div class="text-sm font-medium text-gray-900">${startDate} → ${endDate}</div>
+                        </div>
+                        <div class="${priceColor} px-2 py-1 rounded text-xs font-semibold">
+                            ${priceLevel}: ${period.avg_price}€
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                    </div>
+                </div>
+            `;
+            
+            timeline.innerHTML = html;
+        }
+        
+        function generateAIPriceSuggestions() {
+            const history = JSON.parse(localStorage.getItem('calendarScansHistory') || '[]');
+            const aiData = JSON.parse(localStorage.getItem('priceAIData') || '{"adjustments": [], "patterns": {}, "suggestions": []}');
+            
+            const suggestionsGrid = document.getElementById('aiSuggestionsGrid');
+            const emptyState = document.getElementById('aiSuggestionsEmpty');
+            
+            if (history.length === 0) {
+                suggestionsGrid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+            
+            emptyState.classList.add('hidden');
+            
+            const latestScan = history[0];
+            const periods = latestScan.periods || [];
+            
+            // Generate suggestions for each group
+            const groups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'G', 'J1', 'J2', 'L1', 'L2', 'M1', 'M2', 'N'];
+            let html = '';
+            
+            groups.forEach(group => {
+                // Get AI pattern for this group if exists
+                const pattern = aiData.patterns[group] || null;
+                
+                // Calculate suggestion
+                let suggestion = null;
+                if (pattern && pattern.adjustmentCount >= 3) {
+                    // Use learned pattern
+                    suggestion = {
+                        type: 'learned',
+                        strategy: `Follow Lowest +${pattern.avgDiff}€`,
+                        confidence: Math.min(50 + (pattern.adjustmentCount * 5), 95),
+                        reason: `Based on ${pattern.adjustmentCount} manual adjustments`
+                    };
+                } else if (periods.length > 0) {
+                    // Use period-based suggestion
+                    const avgPeriodPrice = periods.reduce((sum, p) => sum + p.avg_price, 0) / periods.length;
+                    const suggestedDiff = avgPeriodPrice > 30 ? 1.50 : avgPeriodPrice > 25 ? 1.00 : 0.50;
+                    suggestion = {
+                        type: 'period',
+                        strategy: `Follow Lowest +${suggestedDiff}€`,
+                        confidence: 70,
+                        reason: `Based on ${periods.length} detected pricing periods`
+                    };
+                }
+                
+                if (suggestion) {
+                    const confidenceColor = suggestion.confidence >= 80 ? 'text-green-600' : suggestion.confidence >= 60 ? 'text-yellow-600' : 'text-orange-600';
+                    const typeIcon = suggestion.type === 'learned' ? '🎓' : '📊';
+                    
+                    html += `
+                        <div class="bg-white border-2 border-gray-200 rounded-lg p-4 hover:border-[#009cb6] transition-colors">
+                            <div class="flex items-center justify-between mb-3">
+                                <h4 class="text-lg font-bold text-gray-900">${group}</h4>
+                                <span class="${confidenceColor} text-sm font-semibold">${suggestion.confidence}% confidence</span>
+                            </div>
+                            <div class="mb-3">
+                                <div class="text-sm text-gray-600 mb-1">${typeIcon} ${suggestion.reason}</div>
+                                <div class="text-lg font-semibold text-[#009cb6]">${suggestion.strategy}</div>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="applyAIPriceSuggestion('${group}', '${suggestion.strategy}')" class="flex-1 px-3 py-2 bg-[#009cb6] text-white rounded hover:bg-[#008599] transition-colors text-sm font-medium">
+                                    Apply Strategy
+                                </button>
+                                <button onclick="viewGroupDetails('${group}')" class="px-3 py-2 bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors text-sm font-medium">
+                                    Details
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }
+            });
+            
+            suggestionsGrid.innerHTML = html || '<p class="col-span-2 text-center text-gray-500">No suggestions available yet. Adjust prices manually to train the AI.</p>';
+        }
+        
+        function applyAIPriceSuggestion(group, strategy) {
+            showNotification(`✅ Applied AI suggestion for ${group}: ${strategy}`, 'success');
+            closeAIPriceSuggestions();
+            
+            // TODO: Actually apply the strategy to the group
+            console.log(`Applying strategy for ${group}:`, strategy);
+        }
+        
+        function viewGroupDetails(group) {
+            const aiData = JSON.parse(localStorage.getItem('priceAIData') || '{"adjustments": [], "patterns": {}}');
+            const pattern = aiData.patterns[group];
+            
+            if (!pattern) {
+                showNotification(`No historical data available for ${group}`, 'info');
+                return;
+            }
+            
+            showNotification(
+                `${group} Pattern:\n` +
+                `Adjustments: ${pattern.adjustmentCount}\n` +
+                `Avg Difference: ${pattern.avgDiff}€\n` +
+                `Last Adjusted: ${new Date(pattern.lastAdjustment).toLocaleDateString()}`,
+                'info',
+                8000
+            );
+        }
+        
+        // Initialize period timeline on date selection change
+        function updateDateSelectionAuto() {
+            const dateType = document.getElementById('dateTypeAuto').value;
+            const timelineContainer = document.getElementById('periodTimelineContainer');
+            
+            // Hide all selectors
+            document.getElementById('specificDateAuto').classList.add('hidden');
+            document.getElementById('monthSelectorAuto').classList.add('hidden');
+            document.getElementById('yearSelectorAuto').classList.add('hidden');
+            document.getElementById('periodSelectorAuto').classList.add('hidden');
+            
+            // Show period timeline for month/year/period
+            if (dateType === 'month' || dateType === 'year' || dateType === 'period') {
+                timelineContainer.classList.remove('hidden');
+                const history = JSON.parse(localStorage.getItem('calendarScansHistory') || '[]');
+                if (history.length > 0 && history[0].periods) {
+                    displayPeriodTimeline(history[0].periods);
+                }
+            } else {
+                timelineContainer.classList.add('hidden');
+            }
+            
+            // Show appropriate selector
+            if (dateType === 'specific') {
+                document.getElementById('specificDateAuto').classList.remove('hidden');
+            } else if (dateType === 'month') {
+                document.getElementById('monthSelectorAuto').classList.remove('hidden');
+                initializeMonthPicker();
+            } else if (dateType === 'year') {
+                document.getElementById('yearSelectorAuto').classList.remove('hidden');
+                initializeYearPicker();
+            } else if (dateType === 'period') {
+                document.getElementById('periodSelectorAuto').classList.remove('hidden');
+                loadPricePeriodsFromHistory();
+            }
+        }
+        
+        function displayPeriodTimeline(periods) {
+            const timeline = document.getElementById('periodTimeline');
+            const periodCount = document.getElementById('periodCount');
+            
+            if (!periods || periods.length === 0) {
+                timeline.innerHTML = '<p class="text-sm text-gray-500">No periods detected yet. Run Calendar Scan first.</p>';
+                periodCount.textContent = '0 periods';
+                return;
+            }
+            
+            periodCount.textContent = `${periods.length} period${periods.length > 1 ? 's' : ''}`;
+            
+            let html = '';
+            periods.forEach((period, index) => {
+                const startDate = new Date(period.start).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const endDate = new Date(period.end).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+                const priceLevel = period.avg_price > 30 ? 'High' : period.avg_price > 25 ? 'Mid' : 'Low';
+                const priceColor = period.avg_price > 30 ? 'bg-red-500' : period.avg_price > 25 ? 'bg-yellow-500' : 'bg-green-500';
+                const progressWidth = Math.min(100, (period.duration_days / 60) * 100);
+                
+                html += `
+                    <div class="bg-white rounded-lg p-3 border border-gray-200 hover:border-[#009cb6] transition-colors cursor-pointer" onclick="selectPeriod(${index})">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-sm font-semibold text-gray-900">Period ${index + 1}</span>
+                            <span class="text-xs ${priceColor} text-white px-2 py-1 rounded-full">${priceLevel} @ ${period.avg_price}€</span>
+                        </div>
+                        <div class="text-xs text-gray-600 mb-2">
+                            ${startDate} → ${endDate} (${period.duration_days} days)
+                        </div>
+                        <div class="w-full bg-gray-200 rounded-full h-1.5">
+                            <div class="${priceColor} h-1.5 rounded-full" style="width: ${progressWidth}%"></div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            timeline.innerHTML = html;
+        }
+        
+        function selectPeriod(index) {
+            const periodPicker = document.getElementById('periodPickerAuto');
+            if (periodPicker) {
+                periodPicker.value = index;
+                showNotification(`✅ Selected Period ${index + 1}`, 'success', 2000);
             }
         }
 
