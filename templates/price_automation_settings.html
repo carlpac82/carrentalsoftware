@@ -1083,7 +1083,27 @@
             const container = document.getElementById('aiAdjustmentsLog');
             
             if (adjustments.length === 0) {
-                container.innerHTML = '<div class="text-sm text-gray-500 text-center py-8">No manual adjustments recorded yet. Start adjusting prices in the visual interface to train the AI!</div>';
+                container.innerHTML = `
+                    <div class="text-center py-8 px-4">
+                        <svg class="w-16 h-16 mx-auto text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                        </svg>
+                        <p class="text-gray-700 font-medium mb-3">No manual adjustments yet</p>
+                        <div class="text-sm text-gray-600 space-y-2 max-w-md mx-auto text-left bg-blue-50 border border-blue-200 rounded p-4">
+                            <p class="font-medium text-blue-900">📍 How to train the AI:</p>
+                            <ol class="list-decimal list-inside space-y-1 ml-2">
+                                <li>Go to <strong>Price Automation</strong> page</li>
+                                <li>Click <strong>Generate</strong> to load competitor prices</li>
+                                <li>In <strong>Visual mode</strong>, drag the <span class="text-yellow-600 font-bold">slider</span> to adjust prices</li>
+                                <li>Each slider adjustment is recorded as AI learning</li>
+                                <li>After 5-10 adjustments, come back here to see suggestions!</li>
+                            </ol>
+                        </div>
+                        <button onclick="generateSampleAIData()" class="mt-4 px-4 py-2 bg-yellow-500 text-white rounded hover:bg-yellow-600 transition-colors text-sm font-medium">
+                            Generate Sample Data (for testing)
+                        </button>
+                    </div>
+                `;
                 return;
             }
             
@@ -1261,6 +1281,50 @@
             aiData.suggestions.splice(index, 1);
             localStorage.setItem('priceAIData', JSON.stringify(aiData));
             loadAISettings();
+        }
+        
+        function generateSampleAIData() {
+            if (!confirm('Generate 10 sample AI adjustments for testing?')) return;
+            
+            const aiData = JSON.parse(localStorage.getItem('priceAIData') || '{"adjustments": [], "patterns": {}, "suggestions": []}');
+            
+            // Sample groups and days
+            const groups = ['B1', 'B2', 'D', 'E1', 'E2', 'F', 'J1'];
+            const days = [1, 2, 3, 7, 14, 30];
+            const locations = ['Albufeira', 'Aeroporto de Faro'];
+            
+            // Generate 10 sample adjustments
+            for (let i = 0; i < 10; i++) {
+                const group = groups[Math.floor(Math.random() * groups.length)];
+                const day = days[Math.floor(Math.random() * days.length)];
+                const location = locations[Math.floor(Math.random() * locations.length)];
+                const basePrice = 20 + Math.random() * 30; // 20-50€
+                const adjustment = (Math.random() - 0.5) * 4; // -2 to +2€
+                
+                const sampleAdjustment = {
+                    group: group,
+                    days: day,
+                    location: location,
+                    originalPrice: basePrice,
+                    newPrice: basePrice + adjustment,
+                    timestamp: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(), // Last 7 days
+                    competitorContext: {
+                        lowest: basePrice - 2,
+                        highest: basePrice + 5,
+                        autoPrudente: basePrice
+                    }
+                };
+                
+                aiData.adjustments.push(sampleAdjustment);
+            }
+            
+            // Save
+            localStorage.setItem('priceAIData', JSON.stringify(aiData));
+            
+            // Refresh
+            refreshAISuggestions();
+            
+            alert('✅ Generated 10 sample AI adjustments! Refresh to see suggestions.');
         }
         
         function switchLocation(location) {

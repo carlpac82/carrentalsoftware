@@ -5050,6 +5050,10 @@ Continue?`);
         function applySmartSuggestion(group, days, suggestedPrice, buttonElement) {
             console.log(`🌟 Applying smart suggestion for ${group}/${days}d: ${suggestedPrice}€`);
             
+            // Get current price from market data for AI learning
+            const allPricesData = window[`allPrices_${group}_${days}`];
+            const originalPrice = allPricesData?.find(p => p.type === 'autoprudente')?.price || 0;
+            
             // Update the table input field
             const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${group}"][data-dias="${days}"][data-type="auto"]`);
             if (inputAuto) {
@@ -5064,6 +5068,25 @@ Continue?`);
                 setTimeout(() => {
                     inputAuto.classList.remove('bg-green-100');
                 }, 1500);
+            }
+            
+            // 🤖 AI LEARNING: Record this as manual adjustment
+            if (originalPrice > 0 && originalPrice !== suggestedPrice) {
+                recordAIAdjustment({
+                    group: group,
+                    days: days,
+                    location: document.getElementById('locationAuto')?.value || 'Unknown',
+                    originalPrice: originalPrice,
+                    newPrice: suggestedPrice,
+                    timestamp: new Date().toISOString(),
+                    source: 'smart_ai_suggestion',
+                    competitorContext: {
+                        lowest: allPricesData?.filter(p => p.type === 'competitor').reduce((min, p) => p.price < min ? p.price : min, Infinity),
+                        highest: allPricesData?.filter(p => p.type === 'competitor').reduce((max, p) => p.price > max ? p.price : max, 0),
+                        autoPrudente: originalPrice
+                    }
+                });
+                console.log(`✅ Smart AI adjustment recorded for AI learning: ${group}/${days}d`);
             }
             
             // Update button
