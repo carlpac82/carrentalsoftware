@@ -2479,12 +2479,12 @@
             progressBar.classList.remove('hidden');
             
             try {
-                // Get selected location and date
-                const currentLocation = document.getElementById('locationAuto')?.value || 'Albufeira';
-                const pickupDate = document.getElementById('pickupDateAuto')?.value;
+                // Get selected location and date (EXACTLY like Current Prices tab)
+                const currentLocation = document.getElementById('locationAuto').value;
+                const pickupDate = document.getElementById('pickupDateAuto').value;
                 
                 if (!pickupDate) {
-                    showNotification('Please select a pickup date first', 'warning');
+                    showNotification('Selecione uma data primeiro', 'warning');
                     loadingIcon.classList.add('hidden');
                     generateIcon.classList.remove('hidden');
                     btn.disabled = false;
