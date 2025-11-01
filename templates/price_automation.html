@@ -1994,6 +1994,30 @@
             console.log(`✅ Way2Rentals CSV exported: ${filename}`);
             showNotification(`✅ Way2Rentals CSV exported: ${filename}`, 'success');
         }
+        
+        async function saveExportToHistory(exportData) {
+            try {
+                console.log('💾 Saving export to history...', exportData);
+                
+                const response = await fetch('/api/export-history/save', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(exportData)
+                });
+                
+                const result = await response.json();
+                
+                if (result.ok) {
+                    console.log(`✅ Export saved to history (ID: ${result.export_id})`);
+                } else {
+                    console.warn('⚠️ Failed to save export to history:', result.error);
+                }
+            } catch (error) {
+                console.error('❌ Error saving export to history:', error);
+            }
+        }
 
         function showNotification(message, type = 'success') {
             const notification = document.createElement('div');
