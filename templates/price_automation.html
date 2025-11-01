@@ -4757,10 +4757,12 @@ Continue?`);
             let suggestedPrice = autoPrudente.price;
             let reasoning = '';
             
-            // Regra 1: Vendas Antecipadas (Long-term bookings)
+            // Regra 1: RESERVAS LONGAS (14+ dias de aluguer)
+            // Normalmente clientes que reservam períodos longos planeiam com antecedência (3-6 meses antes)
             if (dayPeriod >= 14) {
-                // Para períodos longos, não competir pelo preço mais baixo
-                // Posicionar em 60-80% do mercado (value positioning)
+                // Para alugueres longos, cliente já planeou viagem com antecedência
+                // Não é sensível a diferenças pequenas de preço - prioriza confiabilidade
+                // Posicionar em 60-75% do mercado (value positioning)
                 const targetPercentile = 70;
                 const targetIndex = Math.floor(sortedCompetitors.length * (targetPercentile / 100));
                 const targetPrice = sortedCompetitors[targetIndex]?.price || avgCompetitorPrice;
@@ -4768,51 +4770,54 @@ Continue?`);
                 if (percentile < 50) {
                     strategy = 'INCREASE_TO_VALUE';
                     suggestedPrice = targetPrice * 0.98; // Slightly below target
-                    reasoning = `Long-term bookings (${dayPeriod}d): Position at value range (70th percentile) instead of lowest price. Customers booking far ahead prioritize reliability over lowest cost.`;
+                    reasoning = `Aluguer longo (${dayPeriod}d): Cliente reservou com antecedência (3-6 meses). Não precisa ser o mais barato - posicionar em value range (70º percentil). Cliente prioriza confiabilidade e disponibilidade.`;
                 } else if (percentile > 85) {
                     strategy = 'DECREASE_TO_COMPETITIVE';
                     suggestedPrice = targetPrice * 1.02;
-                    reasoning = `Currently too expensive for ${dayPeriod}d bookings. Reduce to competitive value range.`;
+                    reasoning = `Demasiado caro para aluguer de ${dayPeriod}d. Reduzir para value range competitivo.`;
                 } else {
                     strategy = 'MAINTAIN';
-                    reasoning = `Good positioning for long-term bookings at ${percentile.toFixed(0)}th percentile.`;
+                    reasoning = `Bem posicionado para reservas antecipadas (${dayPeriod}d) no ${percentile.toFixed(0)}º percentil.`;
                 }
             }
-            // Regra 2: Bookings Curtos (Last-minute / urgency)
+            // Regra 2: RESERVAS CURTAS (1-3 dias)
+            // Pode ser last-minute OU weekend trips - mercado mais competitivo
             else if (dayPeriod <= 3) {
-                // Para períodos curtos, market share é importante
-                // Posicionar em 30-50% (competitive but not lowest)
+                // Para alugueres curtos, market share é importante
+                // Pode ser last-minute (alta urgência) ou weekend (muita competição)
+                // Posicionar em 30-45% (competitive but not lowest)
                 const targetPercentile = 40;
                 const targetIndex = Math.floor(sortedCompetitors.length * (targetPercentile / 100));
                 const targetPrice = sortedCompetitors[targetIndex]?.price || (lowestCompetitor.price * 1.15);
                 
                 if (percentile < 20) {
                     strategy = 'INCREASE_SLIGHTLY';
-                    suggestedPrice = lowestCompetitor.price * 1.05;
-                    reasoning = `Short-term (${dayPeriod}d): Too cheap! Increase to capture margin. Last-minute customers have less price sensitivity.`;
+                    suggestedPrice = lowestCompetitor.price * 1.08;
+                    reasoning = `Aluguer curto (${dayPeriod}d): Muito barato! Pode ser last-minute com urgência. Aumentar ligeiramente para capturar margem mantendo competitividade.`;
                 } else if (percentile > 60) {
                     strategy = 'DECREASE_TO_COMPETITIVE';
                     suggestedPrice = targetPrice;
-                    reasoning = `Too expensive for short-term bookings. Need competitive positioning.`;
+                    reasoning = `Demasiado caro para ${dayPeriod}d. Mercado curto é competitivo - reduzir para 40º percentil.`;
                 } else {
                     strategy = 'MAINTAIN';
-                    reasoning = `Good competitive positioning for ${dayPeriod}d at ${percentile.toFixed(0)}th percentile.`;
+                    reasoning = `Boa posição competitiva para ${dayPeriod}d no ${percentile.toFixed(0)}º percentil.`;
                 }
             }
-            // Regra 3: Medium-term (7-14 days) - Balanced
+            // Regra 3: RESERVAS MÉDIAS (4-13 dias) - Balanced
+            // Mix de antecipadas e last-minute - estratégia equilibrada
             else {
                 // Posicionar em 40-60% (balanced strategy)
                 if (percentile < 30) {
                     strategy = 'INCREASE_MARGIN';
-                    suggestedPrice = lowestCompetitor.price * 1.10;
-                    reasoning = `Being cheapest leaves money on table. Increase to ${suggestedPrice.toFixed(2)}€ for better margin.`;
+                    suggestedPrice = lowestCompetitor.price * 1.12;
+                    reasoning = `Ser sempre o mais barato (${percentile.toFixed(0)}º percentil) deixa dinheiro na mesa. Aumentar para ${suggestedPrice.toFixed(2)}€ para melhor margem - cliente de ${dayPeriod}d aceita pequena diferença.`;
                 } else if (percentile > 70) {
                     strategy = 'DECREASE_SLIGHTLY';
                     suggestedPrice = avgCompetitorPrice * 0.95;
-                    reasoning = `Too expensive. Reduce to below average for better conversion.`;
+                    reasoning = `Demasiado caro (${percentile.toFixed(0)}º percentil). Reduzir para abaixo da média para melhor conversão em ${dayPeriod}d.`;
                 } else {
                     strategy = 'MAINTAIN';
-                    reasoning = `Well positioned at ${percentile.toFixed(0)}th percentile in mid-range market.`;
+                    reasoning = `Bem posicionado no ${percentile.toFixed(0)}º percentil para mercado de ${dayPeriod}d (mix antecipadas/last-minute).`;
                 }
             }
             
