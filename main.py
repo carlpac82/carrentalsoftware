@@ -3285,7 +3285,7 @@ async def track_by_params(request: Request):
                 if 'faro' in location.lower():
                     carjet_loc = 'Faro Aeroporto (FAO)'
                 elif 'albufeira' in location.lower():
-                    carjet_loc = 'Albufeira Cidade'
+                    carjet_loc = 'Albufeira'
                 
                 # Formato de datas para CarJet (dd/mm/yyyy)
                 start_str = start_dt.strftime("%d/%m/%Y")
@@ -3400,7 +3400,7 @@ async def track_by_params(request: Request):
                         if 'faro' in location.lower():
                             carjet_loc = 'Faro Aeroporto (FAO)'
                         elif 'albufeira' in location.lower():
-                            carjet_loc = 'Albufeira Cidade'
+                            carjet_loc = 'Albufeira'
                         
                         print(f"[PLAYWRIGHT] Preenchendo formulário via JS: {carjet_loc}", file=sys.stderr, flush=True)
                         
@@ -3641,7 +3641,7 @@ async def track_by_params(request: Request):
             if 'faro' in location.lower():
                 carjet_location = 'Faro Aeroporto (FAO)'
             elif 'albufeira' in location.lower():
-                carjet_location = 'Albufeira Cidade'
+                carjet_location = 'Albufeira'  # Simplificado - sem "Cidade"
             
             # Configurar Chrome headless
             chrome_options = Options()
@@ -3889,7 +3889,7 @@ async def track_by_params(request: Request):
                         exact_loc = location
                         lo = (location or '').lower()
                         if 'albufeira' in lo:
-                            exact_loc = 'Albufeira Cidade'
+                            exact_loc = 'Albufeira'
                         elif 'faro' in lo:
                             exact_loc = 'Faro Aeroporto (FAO)'
                         # Try common selectors for the location input
@@ -4194,7 +4194,7 @@ async def track_by_params(request: Request):
                                 exact_loc2 = location
                                 lo2 = (location or '').lower()
                                 if 'albufeira' in lo2:
-                                    exact_loc2 = 'Albufeira Cidade'
+                                    exact_loc2 = 'Albufeira'
                                 elif 'faro' in lo2:
                                     exact_loc2 = 'Faro Aeroporto (FAO)'
                                 loc2 = None
