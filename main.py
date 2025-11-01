@@ -3664,12 +3664,32 @@ async def track_by_params(request: Request):
                 print(f"[SELENIUM] Configurando Chrome headless...", file=sys.stderr, flush=True)
                 driver.set_page_load_timeout(20)
                 print(f"[SELENIUM] Acessando CarJet homepage...", file=sys.stderr, flush=True)
-                driver.get("https://www.carjet.com/aluguer-carros/index.htm")
+                driver.get("https://www.carjet.com/aluguel-carros/index.htm")  # Português BR
+                time.sleep(2)  # Aguardar página carregar
                 
-                # Fechar cookies via JS
-                print(f"[SELENIUM] Removendo cookies...", file=sys.stderr, flush=True)
-                driver.execute_script("try { document.querySelectorAll('[id*=cookie], [class*=cookie]').forEach(el => el.remove()); } catch(e) {}")
-                time.sleep(0.5)
+                # ACEITAR COOKIES CORRETAMENTE
+                print(f"[SELENIUM] Aceitando cookies...", file=sys.stderr, flush=True)
+                try:
+                    # Tentar clicar no botão de aceitar cookies
+                    accept_btn = driver.find_element(By.CSS_SELECTOR, "button[id*='accept'], button[class*='accept'], button:contains('Aceitar'), button:contains('Accept')")
+                    accept_btn.click()
+                    time.sleep(1)
+                    print(f"[SELENIUM] ✓ Cookies aceitos", file=sys.stderr, flush=True)
+                except:
+                    # Tentar remover via JS se botão não encontrado
+                    driver.execute_script("try { document.querySelectorAll('[id*=cookie], [class*=cookie], [id*=consent], [class*=consent]').forEach(el => el.remove()); } catch(e) {}")
+                    print(f"[SELENIUM] ⚠ Cookies removidos via JS", file=sys.stderr, flush=True)
+                
+                # DETECTAR IDIOMA e ajustar nome da localização
+                page_url = driver.current_url
+                print(f"[SELENIUM] URL atual: {page_url}", file=sys.stderr, flush=True)
+                
+                # Se estiver em inglês, usar nomes em inglês
+                if '/index.htm' in page_url and '/aluguel-carros/' not in page_url and '/aluguer-carros/' not in page_url:
+                    print(f"[SELENIUM] Página em INGLÊS detectada!", file=sys.stderr, flush=True)
+                    if carjet_location == 'Albufeira Cidade':
+                        carjet_location = 'Albufeira City'
+                        print(f"[SELENIUM] Mudando para: {carjet_location}", file=sys.stderr, flush=True)
                 
                 # Preencher formulário - IMPORTANTE: Usar autocomplete corretamente!
                 print(f"[SELENIUM] Preenchendo formulário: {carjet_location}", file=sys.stderr, flush=True)
