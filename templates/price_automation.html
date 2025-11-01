@@ -876,6 +876,80 @@
             }
             
             console.log(`✅ Fill mode changed to: ${mode.toUpperCase()}`);
+            
+            // Update table headers icons
+            updateTableHeaderIcons(mode);
+            
+            // Update table cell values
+            updateTableCellValues(mode);
+        }
+        
+        function updateTableHeaderIcons(mode) {
+            const robotIcon = `<svg class="w-3 h-3 inline-block" fill="currentColor" viewBox="0 0 20 20"><path d="M13 7H7v6h6V7z"/><path fill-rule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 110-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clip-rule="evenodd"/></svg>`;
+            const aiIcon = `<svg class="w-3 h-3 inline-block" fill="currentColor" viewBox="0 0 20 20"><path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/></svg>`;
+            
+            const headers = document.querySelectorAll('#pricesTableAuto').previousElementSibling.querySelectorAll('th');
+            headers.forEach(th => {
+                if (th.classList.contains('text-[#f4ad0f]') && (th.title === 'Auto (AI)' || th.title === 'AI')) {
+                    if (mode === 'auto') {
+                        th.innerHTML = robotIcon;
+                        th.title = 'Auto (AI)';
+                    } else {
+                        th.innerHTML = aiIcon;
+                        th.title = 'AI';
+                    }
+                }
+            });
+            
+            console.log(`🔄 Headers updated to ${mode.toUpperCase()} mode`);
+        }
+        
+        function updateTableCellValues(mode) {
+            const currentLocation = document.getElementById('locationAuto')?.value || 'Albufeira';
+            let updatedCount = 0;
+            
+            // Store original AUTO values if not already stored
+            if (!window.autoTableValues) {
+                window.autoTableValues = {};
+            }
+            
+            grupos.forEach(grupo => {
+                dias.forEach(day => {
+                    const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${grupo}"][data-dias="${day}"][data-type="auto"]`);
+                    if (!inputAuto) return;
+                    
+                    // Store original AUTO value first time
+                    const key = `${grupo}_${day}`;
+                    if (!window.autoTableValues[key] && inputAuto.value && inputAuto.value !== '' && inputAuto.value !== '-') {
+                        window.autoTableValues[key] = inputAuto.value;
+                    }
+                    
+                    if (mode === 'ai') {
+                        // Switch to AI values
+                        const aiPrice = getAIPrice(grupo, day, currentLocation);
+                        if (aiPrice && aiPrice > 0) {
+                            inputAuto.value = aiPrice.toFixed(2);
+                            inputAuto.classList.add('bg-purple-50', 'text-purple-600');
+                            inputAuto.classList.remove('text-[#f4ad0f]');
+                            updatedCount++;
+                        }
+                    } else {
+                        // Switch back to AUTO values
+                        if (window.autoTableValues[key]) {
+                            inputAuto.value = window.autoTableValues[key];
+                            inputAuto.classList.remove('bg-purple-50', 'text-purple-600');
+                            inputAuto.classList.add('text-[#f4ad0f]');
+                            updatedCount++;
+                        }
+                    }
+                });
+            });
+            
+            console.log(`🔄 Updated ${updatedCount} cells to ${mode.toUpperCase()} mode`);
+            
+            if (mode === 'ai' && updatedCount === 0) {
+                showNotification('No AI data available yet. Make manual adjustments to train the AI.', 'warning', 5000);
+            }
         }
         
         // Get AI suggested price based on learning history
@@ -2786,16 +2860,8 @@
                             autoPrice = calculateFixedPrice(strategy);
                         }
                         
-                        // OVERRIDE: Use AI price if AI mode is selected
-                        if (currentFillMode === 'ai') {
-                            const aiPrice = getAIPrice(grupo, day, currentLocation);
-                            if (aiPrice && aiPrice > 0) {
-                                autoPrice = aiPrice;
-                                console.log(`🤖 AI MODE: Using AI suggestion for ${grupo}/${day}d: ${aiPrice.toFixed(2)}€`);
-                            } else {
-                                console.log(`⚠️ AI MODE: No AI data for ${grupo}/${day}d, keeping rule-based price`);
-                            }
-                        }
+                        // Store AUTO price for later toggle
+                        // (Don't override during generate - let toggle handle it)
                         
                         if (autoPrice && autoPrice > 0) {
                             // ⚠️ REGRA 1 (PRIORITY): Apply minimum price per day
@@ -2851,6 +2917,14 @@
                 }
                 
                 progressText.textContent = '✅ Generation complete!';
+                
+                // Apply current fill mode (Auto/AI) to table
+                console.log(`🔄 Applying ${currentFillMode.toUpperCase()} mode to table...`);
+                setTimeout(() => {
+                    updateTableCellValues(currentFillMode);
+                    updateTableHeaderIcons(currentFillMode);
+                }, 500);
+                
                 setTimeout(() => {
                     progressBar.classList.add('hidden');
                 }, 2000);
