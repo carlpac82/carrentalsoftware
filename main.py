@@ -3549,7 +3549,25 @@ async def track_by_params(request: Request):
         
         # MODO DE TESTE LOCAL: Usar URL s/b pré-configurada
         test_url = None
-        print(f"[DEBUG] TEST_MODE_LOCAL={TEST_MODE_LOCAL}, location={location.lower()}")
+        print(f"[DEBUG] TEST_MODE_LOCAL={TEST_MODE_LOCAL}, location={location.lower()}, days={days}")
+        
+        # TENTAR URLs dinâmicas do .env PRIMEIRO (funciona sempre se disponíveis)
+        if TEST_MODE_LOCAL == 0:
+            # Tentar buscar URL específica para location+days
+            loc_prefix = None
+            if 'faro' in location.lower():
+                loc_prefix = 'FARO'
+            elif 'albufeira' in location.lower():
+                loc_prefix = 'ALBUFEIRA'
+            
+            if loc_prefix:
+                env_key = f"{loc_prefix}_{days}D"
+                test_url = os.getenv(env_key, "").strip()
+                if test_url and test_url.startswith('http'):
+                    print(f"[DEBUG] Found dynamic URL in .env: {env_key}={test_url[:80]}...", file=sys.stderr, flush=True)
+                else:
+                    test_url = None
+        
         if TEST_MODE_LOCAL == 1:
             print(f"[DEBUG] Checking location: faro={'faro' in location.lower()}, albufeira={'albufeira' in location.lower()}")
             if 'faro' in location.lower() and TEST_FARO_URL:
