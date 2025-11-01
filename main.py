@@ -3667,17 +3667,51 @@ async def track_by_params(request: Request):
                 driver.get("https://www.carjet.com/aluguel-carros/index.htm")  # Português BR
                 time.sleep(2)  # Aguardar página carregar
                 
-                # ACEITAR COOKIES CORRETAMENTE
+                # ACEITAR COOKIES - TENTAR TODAS AS FORMAS POSSÍVEIS
                 print(f"[SELENIUM] Aceitando cookies...", file=sys.stderr, flush=True)
-                try:
-                    # Tentar clicar no botão de aceitar cookies
-                    accept_btn = driver.find_element(By.CSS_SELECTOR, "button[id*='accept'], button[class*='accept'], button:contains('Aceitar'), button:contains('Accept')")
-                    accept_btn.click()
-                    time.sleep(1)
-                    print(f"[SELENIUM] ✓ Cookies aceitos", file=sys.stderr, flush=True)
-                except:
-                    # Tentar remover via JS se botão não encontrado
-                    driver.execute_script("try { document.querySelectorAll('[id*=cookie], [class*=cookie], [id*=consent], [class*=consent]').forEach(el => el.remove()); } catch(e) {}")
+                time.sleep(2)  # Aguardar popup de cookies carregar
+                
+                # Tentar múltiplos seletores comuns de botões de cookies
+                cookie_selectors = [
+                    "button[id*='accept']",
+                    "button[class*='accept']", 
+                    "button[id*='cookie']",
+                    "a[id*='accept']",
+                    "a[class*='accept']",
+                    "#onetrust-accept-btn-handler",
+                    ".cookie-accept",
+                    ".accept-cookies",
+                    "[data-testid='cookie-accept']",
+                    "button:contains('Aceitar')",
+                    "button:contains('Accept')",
+                    "button:contains('Aceptar')"
+                ]
+                
+                cookies_accepted = False
+                for selector in cookie_selectors:
+                    try:
+                        accept_btn = driver.find_element(By.CSS_SELECTOR, selector)
+                        if accept_btn.is_displayed():
+                            accept_btn.click()
+                            cookies_accepted = True
+                            print(f"[SELENIUM] ✓ Cookies aceitos via: {selector}", file=sys.stderr, flush=True)
+                            time.sleep(1)
+                            break
+                    except:
+                        pass
+                
+                # Se não conseguiu clicar, remover via JS
+                if not cookies_accepted:
+                    print(f"[SELENIUM] Tentando remover cookies via JS...", file=sys.stderr, flush=True)
+                    driver.execute_script("""
+                        try { 
+                            document.querySelectorAll('[id*=cookie], [class*=cookie], [id*=consent], [class*=consent], [class*=modal], [id*=gdpr]').forEach(el => {
+                                el.style.display = 'none';
+                                el.remove();
+                            });
+                            document.body.style.overflow = 'auto';
+                        } catch(e) { console.log(e); }
+                    """)
                     print(f"[SELENIUM] ⚠ Cookies removidos via JS", file=sys.stderr, flush=True)
                 
                 # DETECTAR IDIOMA e ajustar nome da localização
@@ -3695,12 +3729,34 @@ async def track_by_params(request: Request):
                 print(f"[SELENIUM] Preenchendo formulário: {carjet_location}", file=sys.stderr, flush=True)
                 
                 try:
-                    # 1. AGUARDAR elemento pickup estar disponível
+                    # 1. AGUARDAR elemento pickup estar disponível - TENTAR MÚLTIPLOS SELETORES
                     print(f"[SELENIUM] Aguardando campo pickup...", file=sys.stderr, flush=True)
-                    pickup_input = WebDriverWait(driver, 10).until(
-                        EC.presence_of_element_located((By.NAME, "pickup"))
-                    )
-                    print(f"[SELENIUM] ✓ Campo pickup encontrado!", file=sys.stderr, flush=True)
+                    
+                    pickup_selectors = [
+                        (By.NAME, "pickup"),
+                        (By.ID, "pickup"),
+                        (By.CSS_SELECTOR, "input[name='pickup']"),
+                        (By.CSS_SELECTOR, "input#pickup"),
+                        (By.CSS_SELECTOR, "input[placeholder*='local' i]"),
+                        (By.CSS_SELECTOR, "input[placeholder*='destino' i]"),
+                        (By.XPATH, "//input[@name='pickup']"),
+                        (By.XPATH, "//input[@id='pickup']"),
+                    ]
+                    
+                    pickup_input = None
+                    for method, selector in pickup_selectors:
+                        try:
+                            pickup_input = WebDriverWait(driver, 3).until(
+                                EC.presence_of_element_located((method, selector))
+                            )
+                            if pickup_input:
+                                print(f"[SELENIUM] ✓ Campo pickup encontrado via: {method} = {selector}", file=sys.stderr, flush=True)
+                                break
+                        except:
+                            pass
+                    
+                    if not pickup_input:
+                        raise Exception("Campo pickup não encontrado com nenhum seletor!")
                     time.sleep(1)  # Pausa para ver
                     pickup_input.clear()
                     print(f"[SELENIUM] Digitando: {carjet_location}", file=sys.stderr, flush=True)
