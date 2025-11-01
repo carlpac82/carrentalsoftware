@@ -3844,7 +3844,7 @@
                     const sourceGroup = grupo === 'C' ? 'D' : grupo;
                     
                     // Get Auto price input from Automated Prices table
-                    const inputAuto = document.querySelector(`#automatedPricesTable input[data-grupo="${sourceGroup}"][data-dias="${days}"][data-type="auto"]`);
+                    const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${sourceGroup}"][data-dias="${days}"][data-type="auto"]`);
                     
                     if (inputAuto && inputAuto.value) {
                         const autoPrice = parseFloat(inputAuto.value);
