@@ -1,0 +1,19 @@
+# ============================================================
+# AI INTEGRATION - Optional Dependencies
+# Install only if you want external AI pricing analysis
+# ============================================================
+
+# Anthropic Claude API (Recommended)
+# Latest Claude Sonnet 3.5 support
+anthropic>=0.7.0
+
+# OpenAI API (Alternative)
+# GPT-4 Turbo support
+openai>=1.3.0
+
+# Usage:
+# pip install -r requirements-ai.txt
+#
+# Or install individually:
+# pip install anthropic  # For Claude
+# pip install openai     # For GPT-4
