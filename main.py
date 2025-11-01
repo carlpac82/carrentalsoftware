@@ -3285,7 +3285,7 @@ async def track_by_params(request: Request):
                 if 'faro' in location.lower():
                     carjet_loc = 'Faro Aeroporto (FAO)'
                 elif 'albufeira' in location.lower():
-                    carjet_loc = 'Albufeira, Portugal'
+                    carjet_loc = 'Albufeira Cidade'
                 
                 # Formato de datas para CarJet (dd/mm/yyyy)
                 start_str = start_dt.strftime("%d/%m/%Y")
@@ -3400,7 +3400,7 @@ async def track_by_params(request: Request):
                         if 'faro' in location.lower():
                             carjet_loc = 'Faro Aeroporto (FAO)'
                         elif 'albufeira' in location.lower():
-                            carjet_loc = 'Albufeira, Portugal'
+                            carjet_loc = 'Albufeira Cidade'
                         
                         print(f"[PLAYWRIGHT] Preenchendo formulário via JS: {carjet_loc}", file=sys.stderr, flush=True)
                         
@@ -3642,8 +3642,7 @@ async def track_by_params(request: Request):
             if 'faro' in location.lower():
                 carjet_location = 'Faro Aeroporto (FAO)'
             elif 'albufeira' in location.lower():
-                # Tentar múltiplas variações até uma funcionar
-                carjet_location = 'Albufeira, Portugal'  # Com país
+                carjet_location = 'Albufeira Cidade'  # Nome EXATO do CarJet
             
             # Configurar Chrome headless
             chrome_options = Options()
@@ -3670,30 +3669,51 @@ async def track_by_params(request: Request):
                 driver.execute_script("try { document.querySelectorAll('[id*=cookie], [class*=cookie]').forEach(el => el.remove()); } catch(e) {}")
                 time.sleep(0.5)
                 
-                # Preencher formulário
+                # Preencher formulário - IMPORTANTE: Usar autocomplete corretamente!
                 print(f"[SELENIUM] Preenchendo formulário: {carjet_location}", file=sys.stderr, flush=True)
-                driver.execute_script("""
-                    function fill(sel, val) {
-                        const el = document.querySelector(sel);
-                        if (el) { 
-                            el.value = val; 
-                            el.dispatchEvent(new Event('change', {bubbles: true}));
-                            return true;
+                
+                try:
+                    # 1. Localização pickup com autocomplete
+                    pickup_input = driver.find_element(By.NAME, "pickup")
+                    pickup_input.clear()
+                    pickup_input.send_keys(carjet_location)
+                    time.sleep(1.5)  # Aguardar autocomplete carregar
+                    
+                    # Clicar na primeira sugestão do autocomplete
+                    try:
+                        suggestion = WebDriverWait(driver, 3).until(
+                            EC.element_to_be_clickable((By.CSS_SELECTOR, ".ui-menu-item:first-child"))
+                        )
+                        suggestion.click()
+                        print(f"[SELENIUM] ✓ Localização selecionada do autocomplete", file=sys.stderr, flush=True)
+                    except:
+                        print(f"[SELENIUM] ⚠ Autocomplete não encontrado, continuando...", file=sys.stderr, flush=True)
+                    
+                    time.sleep(0.5)
+                    
+                    # 2. Preencher datas e horas via JavaScript
+                    driver.execute_script("""
+                        function fill(sel, val) {
+                            const el = document.querySelector(sel);
+                            if (el) { 
+                                el.value = val; 
+                                el.dispatchEvent(new Event('change', {bubbles: true}));
+                                return true;
+                            }
+                            return false;
                         }
-                        return false;
-                    }
-                    const r1 = fill('input[name="pickup"]', arguments[0]);
-                    const r2 = fill('input[name="dropoff"]', arguments[0]);
-                    const r3 = fill('input[name="fechaRecogida"]', arguments[1]);
-                    const r4 = fill('input[name="fechaEntrega"]', arguments[2]);
+                        fill('input[name="dropoff"]', arguments[0]);
+                        fill('input[name="fechaRecogida"]', arguments[1]);
+                        fill('input[name="fechaEntrega"]', arguments[2]);
+                        
+                        const h1 = document.querySelector('select[name="fechaRecogidaSelHour"]');
+                        const h2 = document.querySelector('select[name="fechaEntregaSelHour"]');
+                        if (h1) h1.value = arguments[3] || '16:00';
+                        if (h2) h2.value = arguments[4] || '10:00';
+                    """, carjet_location, start_dt.strftime("%d/%m/%Y"), end_dt.strftime("%d/%m/%Y"), start_dt.strftime("%H:%M"), end_dt.strftime("%H:%M"))
                     
-                    const h1 = document.querySelector('select[name="fechaRecogidaSelHour"]');
-                    const h2 = document.querySelector('select[name="fechaEntregaSelHour"]');
-                    if (h1) h1.value = arguments[3] || '16:00';
-                    if (h2) h2.value = arguments[4] || '10:00';
-                    
-                    return {r1, r2, r3, r4};
-                """, carjet_location, start_dt.strftime("%d/%m/%Y"), end_dt.strftime("%d/%m/%Y"), start_dt.strftime("%H:%M"), end_dt.strftime("%H:%M"))
+                except Exception as e:
+                    print(f"[SELENIUM] Erro ao preencher: {e}", file=sys.stderr, flush=True)
                 
                 time.sleep(0.5)
                 
@@ -3891,7 +3911,7 @@ async def track_by_params(request: Request):
                         exact_loc = location
                         lo = (location or '').lower()
                         if 'albufeira' in lo:
-                            exact_loc = 'Albufeira, Portugal'
+                            exact_loc = 'Albufeira Cidade'
                         elif 'faro' in lo:
                             exact_loc = 'Faro Aeroporto (FAO)'
                         # Try common selectors for the location input
@@ -4196,7 +4216,7 @@ async def track_by_params(request: Request):
                                 exact_loc2 = location
                                 lo2 = (location or '').lower()
                                 if 'albufeira' in lo2:
-                                    exact_loc2 = 'Albufeira, Portugal'
+                                    exact_loc2 = 'Albufeira Cidade'
                                 elif 'faro' in lo2:
                                     exact_loc2 = 'Faro Aeroporto (FAO)'
                                 loc2 = None
