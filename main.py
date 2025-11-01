@@ -1809,9 +1809,12 @@ async def home(request: Request):
     # Load supplier logos for preloading
     supplier_logos = []
     try:
-        with get_db() as conn:
+        conn = sqlite3.connect(DB_PATH)
+        try:
             rows = conn.execute("SELECT DISTINCT logo_path FROM suppliers WHERE logo_path IS NOT NULL AND active = 1").fetchall()
             supplier_logos = [row[0] for row in rows if row[0]]
+        finally:
+            conn.close()
     except Exception as e:
         print(f"Error loading supplier logos: {e}", file=sys.stderr, flush=True)
     
@@ -1837,8 +1840,11 @@ async def admin_root(request: Request, section: str = None):
     user_id = request.session.get("user_id")
     current_user = None
     if user_id:
-        with get_db() as conn:
+        conn = sqlite3.connect(DB_PATH)
+        try:
             current_user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        finally:
+            conn.close()
     
     return templates.TemplateResponse("settings_dashboard.html", {
         "request": request,
@@ -1858,8 +1864,11 @@ async def price_history(request: Request):
     user_id = request.session.get("user_id")
     current_user = None
     if user_id:
-        with get_db() as conn:
+        conn = sqlite3.connect(DB_PATH)
+        try:
             current_user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        finally:
+            conn.close()
     
     return templates.TemplateResponse("price_history.html", {
         "request": request,
@@ -1878,8 +1887,11 @@ async def price_automation(request: Request):
     user_id = request.session.get("user_id")
     current_user = None
     if user_id:
-        with get_db() as conn:
+        conn = sqlite3.connect(DB_PATH)
+        try:
             current_user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        finally:
+            conn.close()
     
     return templates.TemplateResponse("price_automation.html", {
         "request": request,
@@ -1898,8 +1910,11 @@ async def price_automation_fill(request: Request):
     user_id = request.session.get("user_id")
     current_user = None
     if user_id:
-        with get_db() as conn:
+        conn = sqlite3.connect(DB_PATH)
+        try:
             current_user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        finally:
+            conn.close()
     
     return templates.TemplateResponse("price_automation_fill.html", {
         "request": request,
