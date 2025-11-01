@@ -3761,55 +3761,19 @@ async def track_by_params(request: Request):
                     pickup_input.clear()
                     print(f"[SELENIUM] Digitando: {carjet_location}", file=sys.stderr, flush=True)
                     pickup_input.send_keys(carjet_location)
-                    print(f"[SELENIUM] Aguardando autocomplete...", file=sys.stderr, flush=True)
-                    print(f"[SELENIUM] Aguardando dropdown aparecer (5s)...", file=sys.stderr, flush=True)
-                    time.sleep(5)  # Aguardar dropdown aparecer (aumentado para você ver)
                     
-                    # CLICAR NO DROPDOWN - TENTAR MÚLTIPLOS SELETORES
-                    dropdown_selectors = [
-                        ".ui-menu-item:first-child",
-                        ".ui-menu-item:first-of-type",
-                        ".ui-menu-item a:first-child",
-                        "ul.ui-menu li:first-child",
-                        "[role='option']:first-child",
-                        ".autocomplete-item:first-child",
-                        ".autocomplete-suggestion:first-child",
-                        "li[data-value]:first-child",
-                        ".suggestions li:first-child",
-                        "#ui-id-1"
-                    ]
+                    # PAUSA PARA VOCÊ CLICAR MANUALMENTE
+                    print(f"\n" + "="*60, file=sys.stderr, flush=True)
+                    print(f"[SELENIUM] ⏸️  PAUSADO! CLIQUE MANUALMENTE NO DROPDOWN!", file=sys.stderr, flush=True)
+                    print(f"[SELENIUM] Aguardando 30 segundos para você clicar...", file=sys.stderr, flush=True)
+                    print(f"="*60 + "\n", file=sys.stderr, flush=True)
+                    time.sleep(30)  # 30 SEGUNDOS para você clicar manualmente!
                     
-                    clicked = False
-                    for selector in dropdown_selectors:
-                        try:
-                            print(f"[SELENIUM] Tentando seletor: {selector}", file=sys.stderr, flush=True)
-                            suggestion = WebDriverWait(driver, 2).until(
-                                EC.element_to_be_clickable((By.CSS_SELECTOR, selector))
-                            )
-                            if suggestion.is_displayed():
-                                suggestion.click()
-                                clicked = True
-                                print(f"[SELENIUM] ✓ Dropdown clicado via: {selector}", file=sys.stderr, flush=True)
-                                time.sleep(1)
-                                break
-                        except Exception as e:
-                            pass
+                    print(f"[SELENIUM] Continuando após pausa manual...", file=sys.stderr, flush=True)
+                    time.sleep(2)  # Aguardar um pouco mais
                     
-                    # Se não conseguiu clicar, tentar com JavaScript
-                    if not clicked:
-                        print(f"[SELENIUM] ⚠ Dropdown não clicado com seletores, tentando JS...", file=sys.stderr, flush=True)
-                        try:
-                            driver.execute_script("""
-                                const items = document.querySelectorAll('.ui-menu-item, [role="option"]');
-                                if (items.length > 0) {
-                                    items[0].click();
-                                    return true;
-                                }
-                                return false;
-                            """)
-                            print(f"[SELENIUM] ✓ Dropdown clicado via JavaScript", file=sys.stderr, flush=True)
-                        except:
-                            print(f"[SELENIUM] ⚠ Não conseguiu clicar no dropdown!", file=sys.stderr, flush=True)
+                    # DESATIVADO - Tentativas automáticas de click (você já clicou manualmente)
+                    # O código automático está comentado para não interferir com o click manual
                     
                     time.sleep(0.5)
                     
