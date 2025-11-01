@@ -832,6 +832,12 @@
                             </select>
                         </div>
                         <div class="flex items-end gap-2">
+                            <button onclick="runSmartAnalysis()" class="flex-1 px-4 py-2 bg-gradient-to-r from-[#8b5cf6] to-[#f4ad0f] text-white rounded hover:opacity-90 transition-opacity flex items-center justify-center gap-2" title="Smart: Intelligent demand-based positioning">
+                                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                </svg>
+                                Smart
+                            </button>
                             <button onclick="runAIAnalysis()" class="flex-1 px-4 py-2 bg-[#8b5cf6] text-white rounded hover:bg-[#7c3aed] transition-colors flex items-center justify-center gap-2">
                                 <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                                     <path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
@@ -4623,8 +4629,9 @@ Continue?`);
                                 <div class="text-sm font-medium text-green-900">Suggested Strategy:</div>
                                 <div class="text-sm text-green-800">${insight.suggestedStrategy}</div>
                             </div>
-                            <button onclick="applyAISuggestion('${insight.group}', ${JSON.stringify(insight.strategyConfig).replace(/"/g, '&quot;')})" 
-                                    class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm">
+                            <button id="apply-btn-${insight.group}" 
+                                    onclick="applyAISuggestion('${insight.group}', ${JSON.stringify(insight.strategyConfig).replace(/"/g, '&quot;')}, this)" 
+                                    class="px-3 py-1 bg-green-600 text-white rounded hover:bg-green-700 text-sm transition-all">
                                 Apply
                             </button>
                         </div>
@@ -4634,7 +4641,7 @@ Continue?`);
             `).join('');
         }
         
-        function applyAISuggestion(group, strategyConfig) {
+        function applyAISuggestion(group, strategyConfig, buttonElement) {
             console.log(`🤖 Applying AI suggestion for ${group}:`, strategyConfig);
             
             // Apply the strategy to automated price rules
@@ -4659,8 +4666,415 @@ Continue?`);
             
             localStorage.setItem('automatedPriceRules', JSON.stringify(rules));
             
-            showNotification(`AI strategy applied to ${group}! Generate prices to see results.`, 'success');
-            closeAIInsights();
+            // Salvar sugestão aplicada nas AI settings
+            saveAppliedAISuggestion(group, location, strategyConfig);
+            
+            // Atualizar botão para mostrar "Applied"
+            if (buttonElement) {
+                buttonElement.innerHTML = `
+                    <svg class="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    Applied
+                `;
+                buttonElement.classList.remove('bg-green-600', 'hover:bg-green-700');
+                buttonElement.classList.add('bg-green-800', 'cursor-default');
+                buttonElement.disabled = true;
+            }
+            
+            showNotification(`✅ AI strategy applied to ${group}! Generate prices to see results.`, 'success', 3000);
+            // NÃO fechar modal - permitir aplicar outras sugestões
+            // closeAIInsights();
+        }
+        
+        function saveAppliedAISuggestion(group, location, strategyConfig) {
+            // Carregar AI settings
+            let aiSettings = JSON.parse(localStorage.getItem('priceAutomationAISettings') || '{}');
+            
+            if (!aiSettings.appliedSuggestions) {
+                aiSettings.appliedSuggestions = [];
+            }
+            
+            // Adicionar nova sugestão aplicada
+            aiSettings.appliedSuggestions.push({
+                group: group,
+                location: location,
+                strategy: strategyConfig,
+                timestamp: new Date().toISOString(),
+                appliedBy: 'user'
+            });
+            
+            // Manter apenas últimas 50 sugestões
+            if (aiSettings.appliedSuggestions.length > 50) {
+                aiSettings.appliedSuggestions = aiSettings.appliedSuggestions.slice(-50);
+            }
+            
+            localStorage.setItem('priceAutomationAISettings', JSON.stringify(aiSettings));
+            
+            // Também salvar na DB
+            if (window.dbSync) {
+                window.dbSync.save().catch(err => console.warn('DB sync failed:', err));
+            }
+            
+            console.log(`💾 AI suggestion saved for ${group} at ${location}`);
+        }
+        
+        // ===== SMART AI POSITIONING ANALYSIS =====
+        
+        /**
+         * Analisa posicionamento de mercado de forma inteligente
+         * Considera: demand pricing, vendas antecipadas, sazonalidade
+         */
+        function analyzeMarketPositioning(grupo, dayPeriod, allPrices) {
+            console.log(`📊 Analyzing market position for ${grupo}/${dayPeriod}d...`);
+            
+            if (!allPrices || allPrices.length < 2) {
+                return null;
+            }
+            
+            // Separar AutoPrudente vs Competitors
+            const autoPrudente = allPrices.find(p => p.type === 'autoprudente');
+            const competitors = allPrices.filter(p => p.type === 'competitor');
+            
+            if (!autoPrudente || competitors.length === 0) {
+                return null;
+            }
+            
+            // Ordenar competitors por preço
+            const sortedCompetitors = [...competitors].sort((a, b) => a.price - b.price);
+            
+            // Calcular estatísticas
+            const lowestCompetitor = sortedCompetitors[0];
+            const avgCompetitorPrice = competitors.reduce((sum, c) => sum + c.price, 0) / competitors.length;
+            const positionInMarket = sortedCompetitors.findIndex(c => c.price > autoPrudente.price) + 1;
+            const totalPositions = sortedCompetitors.length + 1;
+            
+            // Análise de percentil
+            const percentile = (positionInMarket / totalPositions) * 100;
+            
+            // DEMAND PRICING LOGIC
+            let strategy = '';
+            let suggestedPrice = autoPrudente.price;
+            let reasoning = '';
+            
+            // Regra 1: Vendas Antecipadas (Long-term bookings)
+            if (dayPeriod >= 14) {
+                // Para períodos longos, não competir pelo preço mais baixo
+                // Posicionar em 60-80% do mercado (value positioning)
+                const targetPercentile = 70;
+                const targetIndex = Math.floor(sortedCompetitors.length * (targetPercentile / 100));
+                const targetPrice = sortedCompetitors[targetIndex]?.price || avgCompetitorPrice;
+                
+                if (percentile < 50) {
+                    strategy = 'INCREASE_TO_VALUE';
+                    suggestedPrice = targetPrice * 0.98; // Slightly below target
+                    reasoning = `Long-term bookings (${dayPeriod}d): Position at value range (70th percentile) instead of lowest price. Customers booking far ahead prioritize reliability over lowest cost.`;
+                } else if (percentile > 85) {
+                    strategy = 'DECREASE_TO_COMPETITIVE';
+                    suggestedPrice = targetPrice * 1.02;
+                    reasoning = `Currently too expensive for ${dayPeriod}d bookings. Reduce to competitive value range.`;
+                } else {
+                    strategy = 'MAINTAIN';
+                    reasoning = `Good positioning for long-term bookings at ${percentile.toFixed(0)}th percentile.`;
+                }
+            }
+            // Regra 2: Bookings Curtos (Last-minute / urgency)
+            else if (dayPeriod <= 3) {
+                // Para períodos curtos, market share é importante
+                // Posicionar em 30-50% (competitive but not lowest)
+                const targetPercentile = 40;
+                const targetIndex = Math.floor(sortedCompetitors.length * (targetPercentile / 100));
+                const targetPrice = sortedCompetitors[targetIndex]?.price || (lowestCompetitor.price * 1.15);
+                
+                if (percentile < 20) {
+                    strategy = 'INCREASE_SLIGHTLY';
+                    suggestedPrice = lowestCompetitor.price * 1.05;
+                    reasoning = `Short-term (${dayPeriod}d): Too cheap! Increase to capture margin. Last-minute customers have less price sensitivity.`;
+                } else if (percentile > 60) {
+                    strategy = 'DECREASE_TO_COMPETITIVE';
+                    suggestedPrice = targetPrice;
+                    reasoning = `Too expensive for short-term bookings. Need competitive positioning.`;
+                } else {
+                    strategy = 'MAINTAIN';
+                    reasoning = `Good competitive positioning for ${dayPeriod}d at ${percentile.toFixed(0)}th percentile.`;
+                }
+            }
+            // Regra 3: Medium-term (7-14 days) - Balanced
+            else {
+                // Posicionar em 40-60% (balanced strategy)
+                if (percentile < 30) {
+                    strategy = 'INCREASE_MARGIN';
+                    suggestedPrice = lowestCompetitor.price * 1.10;
+                    reasoning = `Being cheapest leaves money on table. Increase to ${suggestedPrice.toFixed(2)}€ for better margin.`;
+                } else if (percentile > 70) {
+                    strategy = 'DECREASE_SLIGHTLY';
+                    suggestedPrice = avgCompetitorPrice * 0.95;
+                    reasoning = `Too expensive. Reduce to below average for better conversion.`;
+                } else {
+                    strategy = 'MAINTAIN';
+                    reasoning = `Well positioned at ${percentile.toFixed(0)}th percentile in mid-range market.`;
+                }
+            }
+            
+            // Calcular diferença
+            const priceDifference = suggestedPrice - autoPrudente.price;
+            const percentageChange = (priceDifference / autoPrudente.price) * 100;
+            
+            return {
+                currentPrice: autoPrudente.price,
+                suggestedPrice: suggestedPrice,
+                priceDifference: priceDifference,
+                percentageChange: percentageChange,
+                strategy: strategy,
+                reasoning: reasoning,
+                marketData: {
+                    position: positionInMarket,
+                    totalCompetitors: totalPositions - 1,
+                    percentile: percentile,
+                    lowestPrice: lowestCompetitor.price,
+                    avgPrice: avgCompetitorPrice,
+                    highestPrice: sortedCompetitors[sortedCompetitors.length - 1].price
+                }
+            };
+        }
+        
+        /**
+         * Gera sugestões AI inteligentes baseadas nos dados já carregados
+         */
+        function generateLocalAIInsights() {
+            console.log('🤖 Generating local AI insights from loaded data...');
+            
+            const insights = [];
+            
+            // Para cada grupo
+            grupos.forEach(grupo => {
+                const grupoInsights = {
+                    group: grupo,
+                    groupName: getGroupName(grupo),
+                    suggestions: []
+                };
+                
+                // Para cada período de dias
+                dias.forEach(day => {
+                    const allPricesData = window[`allPrices_${grupo}_${day}`];
+                    
+                    if (allPricesData && allPricesData.length > 0) {
+                        const analysis = analyzeMarketPositioning(grupo, day, allPricesData);
+                        
+                        if (analysis && analysis.strategy !== 'MAINTAIN') {
+                            grupoInsights.suggestions.push({
+                                days: day,
+                                analysis: analysis
+                            });
+                        }
+                    }
+                });
+                
+                if (grupoInsights.suggestions.length > 0) {
+                    insights.push(grupoInsights);
+                }
+            });
+            
+            return insights;
+        }
+        
+        function getGroupName(grupo) {
+            const names = {
+                'B1': 'Mini 4 Doors', 'B2': 'Mini Automatic', 'D': 'Economy',
+                'E1': 'Compact 4 Doors', 'E2': 'Compact Automatic', 'F': 'Intermediate',
+                'G': 'Intermediate Automatic', 'J1': 'Compact SUV', 'J2': 'Intermediate SUV',
+                'L1': 'Standard SUV', 'L2': 'Premium SUV', 'M1': '7 Seater',
+                'M2': '7 Seater Automatic', 'N': '9 Seater'
+            };
+            return names[grupo] || grupo;
+        }
+        
+        /**
+         * SMART ANALYSIS - Análise inteligente baseada em dados já carregados
+         * Usa demand pricing, considera vendas antecipadas vs last-minute
+         */
+        async function runSmartAnalysis() {
+            console.log('🌟 Starting Smart Analysis...');
+            
+            const loadingState = document.getElementById('aiLoadingState');
+            const insightsContainer = document.getElementById('aiInsightsByGroup');
+            
+            // Show loading
+            loadingState.classList.remove('hidden');
+            loadingState.innerHTML = `
+                <div class="flex items-center justify-center gap-3">
+                    <svg class="w-8 h-8 text-[#8b5cf6] animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+                    </svg>
+                    <svg class="w-8 h-8 text-[#f4ad0f] animate-pulse" fill="currentColor" viewBox="0 0 20 20">
+                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                    </svg>
+                </div>
+                <p class="text-gray-600 mt-4 font-medium">🧠 Analyzing market positioning...</p>
+                <p class="text-sm text-gray-500 mt-2">Applying demand pricing intelligence</p>
+            `;
+            insightsContainer.innerHTML = '';
+            
+            // Delay para UX
+            await new Promise(resolve => setTimeout(resolve, 800));
+            
+            try {
+                // Gerar insights locais
+                const insights = generateLocalAIInsights();
+                
+                if (insights.length === 0) {
+                    loadingState.innerHTML = `
+                        <div class="text-center py-8">
+                            <svg class="w-16 h-16 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                            </svg>
+                            <p class="text-gray-600 mt-4">No data loaded yet</p>
+                            <p class="text-sm text-gray-500 mt-2">Generate prices first to see smart suggestions</p>
+                        </div>
+                    `;
+                    return;
+                }
+                
+                // Renderizar sugestões smart
+                renderSmartInsights(insights);
+                
+                // Hide loading
+                loadingState.classList.add('hidden');
+                
+                // Update stats
+                const totalSuggestions = insights.reduce((sum, g) => sum + g.suggestions.length, 0);
+                document.getElementById('aiStatsDataPoints').textContent = totalSuggestions;
+                document.getElementById('aiStatsAvgPosition').textContent = `Smart`;
+                document.getElementById('aiStatsPriceDiff').textContent = `Dynamic`;
+                document.getElementById('aiStatsConfidence').textContent = `Market`;
+                
+                console.log(`✅ Smart Analysis complete: ${insights.length} groups, ${totalSuggestions} suggestions`);
+                
+            } catch (error) {
+                console.error('Smart Analysis error:', error);
+                loadingState.innerHTML = `
+                    <div class="text-center py-8">
+                        <svg class="w-12 h-12 mx-auto text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <p class="text-red-600 mt-4">Error running analysis</p>
+                        <p class="text-sm text-gray-500 mt-2">${error.message}</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function renderSmartInsights(insights) {
+            const container = document.getElementById('aiInsightsByGroup');
+            
+            container.innerHTML = insights.map(grupoInsight => `
+                <div class="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-lg transition-shadow">
+                    <div class="flex items-start justify-between mb-4">
+                        <div>
+                            <h3 class="text-lg font-bold text-gray-900">${grupoInsight.group} - ${grupoInsight.groupName}</h3>
+                            <p class="text-sm text-gray-600">${grupoInsight.suggestions.length} smart suggestion(s)</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-3 py-1 bg-gradient-to-r from-purple-100 to-yellow-100 text-purple-700 rounded-full text-sm font-medium flex items-center gap-1">
+                                <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                                    <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                                </svg>
+                                Smart AI
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="space-y-3">
+                        ${grupoInsight.suggestions.map(sug => `
+                            <div class="bg-gradient-to-r from-purple-50 to-yellow-50 border border-purple-200 rounded p-4">
+                                <div class="flex items-start justify-between mb-2">
+                                    <div class="flex-1">
+                                        <div class="flex items-center gap-2 mb-2">
+                                            <span class="px-2 py-1 bg-white rounded text-sm font-bold text-gray-700">${sug.days}d</span>
+                                            <span class="text-xs text-gray-600">${getStrategyLabel(sug.analysis.strategy)}</span>
+                                        </div>
+                                        <p class="text-sm text-gray-700 mb-2">${sug.analysis.reasoning}</p>
+                                        
+                                        <div class="grid grid-cols-2 gap-3 mb-3">
+                                            <div>
+                                                <div class="text-xs text-gray-500">Current Price</div>
+                                                <div class="text-base font-bold text-gray-900">${sug.analysis.currentPrice.toFixed(2)}€</div>
+                                            </div>
+                                            <div>
+                                                <div class="text-xs text-gray-500">Suggested Price</div>
+                                                <div class="text-base font-bold ${sug.analysis.priceDifference > 0 ? 'text-green-600' : sug.analysis.priceDifference < 0 ? 'text-red-600' : 'text-gray-900'}">
+                                                    ${sug.analysis.suggestedPrice.toFixed(2)}€ 
+                                                    ${sug.analysis.priceDifference !== 0 ? `(${sug.analysis.priceDifference > 0 ? '+' : ''}${sug.analysis.priceDifference.toFixed(2)}€)` : ''}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="text-xs text-gray-600 mb-2">
+                                            <strong>Market Position:</strong> ${sug.analysis.marketData.percentile.toFixed(0)}th percentile 
+                                            (${sug.analysis.marketData.position} of ${sug.analysis.marketData.totalCompetitors + 1})
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                ${sug.analysis.strategy !== 'MAINTAIN' ? `
+                                <button id="apply-smart-${grupoInsight.group}-${sug.days}" 
+                                        onclick="applySmartSuggestion('${grupoInsight.group}', ${sug.days}, ${sug.analysis.suggestedPrice.toFixed(2)}, this)" 
+                                        class="w-full px-3 py-2 bg-gradient-to-r from-[#8b5cf6] to-[#f4ad0f] text-white rounded hover:opacity-90 transition-opacity text-sm font-medium">
+                                    Apply This Suggestion
+                                </button>
+                                ` : '<p class="text-center text-sm text-green-600 font-medium">✓ Optimally positioned</p>'}
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function getStrategyLabel(strategy) {
+            const labels = {
+                'INCREASE_TO_VALUE': '📈 Increase to Value Range',
+                'DECREASE_TO_COMPETITIVE': '📉 Reduce to Competitive',
+                'INCREASE_SLIGHTLY': '↗️ Increase Slightly',
+                'DECREASE_SLIGHTLY': '↘️ Decrease Slightly',
+                'INCREASE_MARGIN': '💰 Increase Margin',
+                'MAINTAIN': '✓ Maintain Position'
+            };
+            return labels[strategy] || strategy;
+        }
+        
+        function applySmartSuggestion(group, days, suggestedPrice, buttonElement) {
+            console.log(`🌟 Applying smart suggestion for ${group}/${days}d: ${suggestedPrice}€`);
+            
+            // Update the table input field
+            const inputAuto = document.querySelector(`#pricesTableAuto input[data-grupo="${group}"][data-dias="${days}"][data-type="auto"]`);
+            if (inputAuto) {
+                inputAuto.value = suggestedPrice.toFixed(2);
+                
+                // Trigger change event
+                const event = new Event('input', { bubbles: true });
+                inputAuto.dispatchEvent(event);
+                
+                // Visual feedback
+                inputAuto.classList.add('bg-green-100');
+                setTimeout(() => {
+                    inputAuto.classList.remove('bg-green-100');
+                }, 1500);
+            }
+            
+            // Update button
+            if (buttonElement) {
+                buttonElement.innerHTML = `
+                    <svg class="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                    </svg>
+                    Applied - ${suggestedPrice.toFixed(2)}€
+                `;
+                buttonElement.classList.remove('from-[#8b5cf6]', 'to-[#f4ad0f]');
+                buttonElement.classList.add('from-green-600', 'to-green-700', 'cursor-default');
+                buttonElement.disabled = true;
+            }
+            
+            showNotification(`✅ Smart pricing applied to ${group} (${days}d): ${suggestedPrice.toFixed(2)}€`, 'success', 3000);
         }
 
         // ===== CALENDAR SCAN HISTORY FUNCTIONS =====
