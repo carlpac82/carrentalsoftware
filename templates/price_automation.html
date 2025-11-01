@@ -2045,7 +2045,7 @@
                                    'JK1', 'JK2', 'LK1', 'MK1', 'MK2', 'NK', 'X'];
             
             // Way2Rentals day periods
-            const way2rentalsDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 35];
+            const way2rentalsDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60];
             
             // Commission: 13.66%
             const commission = 0.1366;
@@ -2345,7 +2345,7 @@
             document.getElementById('c5_3days_perday').textContent = (c5_3 / 3).toFixed(2) + '€';
             
             // Update preview table
-            const days = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 35];
+            const days = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60];
             const tbody = document.getElementById('vansPreviewTable');
             tbody.innerHTML = '';
             
@@ -2527,8 +2527,7 @@
                                      class="w-12 h-8 object-cover rounded flex-shrink-0"
                                      onerror="this.style.display='none'">
                                 <div class="flex-1 min-w-0">
-                                    <div class="text-xs font-semibold text-[#f4ad0f]">AUTOMATED PRICE</div>
-                                    <div class="text-xs text-gray-600 truncate">${sampleCar.car || grupo}</div>
+                                    <div class="text-xs font-semibold text-[#f4ad0f]">Automated Price ${grupo}</div>
                                 </div>
                                 <div>
                                     <div class="font-bold text-sm text-[#f4ad0f]" id="price-display-${grupo}-${day}">${item.price.toFixed(2)}€</div>
@@ -2538,7 +2537,7 @@
                             <div class="bg-gray-50 rounded p-2">
                                 <input type="range" 
                                        id="price-slider-${grupo}-${day}"
-                                       min="${minPrice * 0.95}" 
+                                       min="0" 
                                        max="${maxPrice * 1.05}" 
                                        step="0.05" 
                                        value="${item.price}"
@@ -4097,7 +4096,7 @@
                                    'JK1', 'JK2', 'LK1', 'MK1', 'MK2', 'NK', 'X'];
             
             // Way2Rentals day periods
-            const way2rentalsDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 35];
+            const way2rentalsDays = [1, 2, 3, 4, 5, 6, 7, 8, 9, 14, 22, 28, 31, 60];
             
             // Commission: 13.66%
             const commission = 0.1366;
