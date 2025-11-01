@@ -2482,12 +2482,12 @@
             progressBar.classList.remove('hidden');
             
             try {
-                // Get selected location and date
+                // Get selected location and date selection info
                 const currentLocation = document.getElementById('locationAuto')?.value || 'Albufeira';
-                const pickupDate = document.getElementById('pickupDateAuto')?.value;
+                const dateSelection = getDateRangeFromSelection();
                 
-                if (!pickupDate) {
-                    showNotification('Please select a pickup date first', 'warning');
+                if (!dateSelection) {
+                    showNotification('Please select a date first', 'warning');
                     loadingIcon.classList.add('hidden');
                     generateIcon.classList.remove('hidden');
                     btn.disabled = false;
@@ -2496,7 +2496,13 @@
                     return;
                 }
                 
-                console.log(`🚀 Generating automated prices for ${currentLocation}, Date: ${pickupDate}`);
+                // Load automated price rules from settings
+                const settings = JSON.parse(localStorage.getItem('automatedPriceRules') || '{}');
+                const locationRules = settings[currentLocation] || {};
+                
+                console.log(`🚀 Generating automated prices for ${currentLocation}`);
+                console.log(`📅 Date Selection:`, dateSelection);
+                console.log(`⚙️ Rules loaded:`, Object.keys(locationRules).length, 'groups configured');
                 
                 // STEP 1: Fetch prices from Carjet API and fill Real column + store ALL cars for Auto calculation
                 let realPricesGenerated = 0;
@@ -2520,6 +2526,9 @@
                     
                     let foundPrices = false;
                     const maxAlternativeDays = getMaxAlternativeDays();
+                    
+                    // Determine pickup date based on selection type
+                    const pickupDate = dateSelection.type === 'specific' ? dateSelection.date : dateSelection.startDate;
                     
                     // Try original date and up to X days forward (configurable in settings)
                     for (let dateOffset = 0; dateOffset <= maxAlternativeDays && !foundPrices; dateOffset++) {
@@ -2645,10 +2654,14 @@
                 
                 // STEP 2: Calculate Auto prices based on strategies (using ALL cars from search)
                 const automatedRules = JSON.parse(localStorage.getItem('automatedPriceRules') || '{}');
-                const date = new Date(pickupDate);
+                
+                // Determine date and month based on selection type
+                const effectiveDate = dateSelection.type === 'specific' ? dateSelection.date : dateSelection.startDate;
+                const date = new Date(effectiveDate);
                 const month = date.getMonth() + 1; // 1-12
                 
                 console.log(`📋 Loading strategies from automatedPriceRules for ${currentLocation}, month ${month}`);
+                console.log(`📅 Selection type: ${dateSelection.type}, Description: ${dateSelection.description || 'N/A'}`);
                 console.log(`📂 Full automatedRules:`, automatedRules);
                 console.log(`📍 Rules for ${currentLocation}:`, automatedRules[currentLocation]);
                 
@@ -2724,17 +2737,30 @@
                 
                 console.log(`✅ Auto: ${autoPricesGenerated}, Real: ${realPricesGenerated}`);
                 
-                // Custom message based on results
-                let message = '';
-                if (autoPricesGenerated > 0 && realPricesGenerated > 0) {
-                    message = `Generated:\n• ${autoPricesGenerated} automated prices (Auto)\n• ${realPricesGenerated} real prices (AUTOPRUDENTE)`;
-                } else if (realPricesGenerated > 0) {
-                    message = `Generated:\n• ${realPricesGenerated} real prices (AUTOPRUDENTE)\n• 0 automated prices (no strategies configured)`;
+                // Custom message based on results and selection type
+                let selectionInfo = '';
+                if (dateSelection.type === 'month') {
+                    selectionInfo = `📅 ${dateSelection.description}\n`;
+                } else if (dateSelection.type === 'year') {
+                    selectionInfo = `📅 ${dateSelection.description}\n`;
+                } else if (dateSelection.type === 'period') {
+                    selectionInfo = `📊 ${dateSelection.description}\n`;
                 } else {
-                    message = 'No prices generated from Carjet.\nPlease check your date and location.';
+                    selectionInfo = `📅 Date: ${new Date(dateSelection.date).toLocaleDateString()}\n`;
                 }
                 
-                showNotification(message, realPricesGenerated > 0 ? 'success' : 'warning');
+                let message = '';
+                if (autoPricesGenerated > 0 && realPricesGenerated > 0) {
+                    message = `${selectionInfo}✅ Generated:\n• ${autoPricesGenerated} automated prices (Auto)\n• ${realPricesGenerated} real prices (AUTOPRUDENTE)\n\n💡 Prices calculated using your settings rules`;
+                } else if (autoPricesGenerated > 0) {
+                    message = `${selectionInfo}✅ Generated:\n• ${autoPricesGenerated} automated prices (Auto)\n\n💡 Prices calculated using your settings rules`;
+                } else if (realPricesGenerated > 0) {
+                    message = `${selectionInfo}Generated:\n• ${realPricesGenerated} real prices (AUTOPRUDENTE)\n• 0 automated prices (no strategies configured)\n\n⚙️ Configure rules in Settings to enable Auto prices`;
+                } else {
+                    message = `${selectionInfo}⚠️ No prices generated from Carjet.\nPlease check your date and location.`;
+                }
+                
+                showNotification(message, (autoPricesGenerated > 0 || realPricesGenerated > 0) ? 'success' : 'warning');
                 
                 // Render price comparison cards (hidden by default, user can toggle)
                 if (autoPricesGenerated > 0 || realPricesGenerated > 0) {
