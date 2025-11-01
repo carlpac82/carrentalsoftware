@@ -9331,38 +9331,44 @@ async def download_vehicle_images(request: Request):
         skipped = 0
         errors = []
         
-        # PRIMEIRO: Buscar URLs de fotos do histórico recente de scraping
+        # PRIMEIRO: Buscar URLs de fotos da tabela dedicada car_images
         photo_urls_from_scraping = {}
-        with _db_lock:
-            conn = sqlite3.connect(DB_PATH)
-            try:
-                # Buscar fotos dos últimos 30 dias
-                query = """
-                    SELECT DISTINCT car, photo 
-                    FROM price_snapshots 
-                    WHERE ts >= datetime('now', '-30 days')
-                    AND photo IS NOT NULL
-                    AND photo != ''
-                    ORDER BY ts DESC
-                """
-                rows = conn.execute(query).fetchall()
-                
-                for row in rows:
-                    original_name = row[0]
-                    photo_url = row[1]
-                    
-                    # Limpar nome para encontrar no VEHICLES
-                    clean = original_name.lower().strip()
-                    clean = re.sub(r'\s+(ou\s*similar|or\s*similar).*$', '', clean, flags=re.IGNORECASE)
-                    clean = re.sub(r'\s*\|\s*.*$', '', clean)
-                    clean = re.sub(r'\s+(pequeno|médio|medio|grande|compacto|economico|econômico).*$', '', clean, flags=re.IGNORECASE)
-                    clean = re.sub(r'\s+', ' ', clean).strip()
-                    
-                    if clean in VEHICLES and clean not in photo_urls_from_scraping:
-                        photo_urls_from_scraping[clean] = photo_url
+        try:
+            # Usar car_images.db (DB dedicada de fotos)
+            from pathlib import Path
+            car_images_db = str(Path(__file__).resolve().parent / "car_images.db")
+            
+            if os.path.exists(car_images_db):
+                with _db_lock:
+                    conn = sqlite3.connect(car_images_db)
+                    try:
+                        # Buscar fotos do car_images (tabela dedicada de fotos)
+                        query = """
+                            SELECT DISTINCT model_key, photo_url 
+                            FROM car_images 
+                            WHERE photo_url IS NOT NULL
+                            AND photo_url != ''
+                        """
+                        rows = conn.execute(query).fetchall()
                         
-            finally:
-                conn.close()
+                        for row in rows:
+                            model_key = row[0]
+                            photo_url = row[1]
+                            
+                            # Limpar nome para encontrar no VEHICLES
+                            clean = model_key.lower().strip()
+                            clean = re.sub(r'\s+(ou\s*similar|or\s*similar).*$', '', clean, flags=re.IGNORECASE)
+                            clean = re.sub(r'\s*\|\s*.*$', '', clean)
+                            clean = re.sub(r'\s+(pequeno|médio|medio|grande|compacto|economico|econômico).*$', '', clean, flags=re.IGNORECASE)
+                            clean = re.sub(r'\s+', ' ', clean).strip()
+                            
+                            if clean in VEHICLES and clean not in photo_urls_from_scraping:
+                                photo_urls_from_scraping[clean] = photo_url
+                                
+                    finally:
+                        conn.close()
+        except Exception as e:
+            print(f"[PHOTOS] Erro ao buscar fotos do car_images.db: {e}", file=sys.stderr, flush=True)
         
         print(f"[PHOTOS] Encontradas {len(photo_urls_from_scraping)} fotos no histórico de scraping", file=sys.stderr, flush=True)
         
