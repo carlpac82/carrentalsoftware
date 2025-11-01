@@ -3673,8 +3673,12 @@ async def track_by_params(request: Request):
                 print(f"[SELENIUM] Preenchendo formulário: {carjet_location}", file=sys.stderr, flush=True)
                 
                 try:
-                    # 1. Localização pickup com autocomplete
-                    pickup_input = driver.find_element(By.NAME, "pickup")
+                    # 1. AGUARDAR elemento pickup estar disponível
+                    print(f"[SELENIUM] Aguardando campo pickup...", file=sys.stderr, flush=True)
+                    pickup_input = WebDriverWait(driver, 10).until(
+                        EC.presence_of_element_located((By.NAME, "pickup"))
+                    )
+                    print(f"[SELENIUM] ✓ Campo pickup encontrado!", file=sys.stderr, flush=True)
                     pickup_input.clear()
                     pickup_input.send_keys(carjet_location)
                     time.sleep(1.5)  # Aguardar autocomplete carregar
