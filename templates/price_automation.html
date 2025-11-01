@@ -4397,6 +4397,7 @@ Continue?`);
         
         function updateDateSelectionAuto() {
             const dateType = document.getElementById('dateTypeAuto').value;
+            const timelineContainer = document.getElementById('periodTimelineContainer');
             
             // Hide all selectors
             document.getElementById('specificDateAuto').classList.add('hidden');
@@ -4407,16 +4408,40 @@ Continue?`);
             // Show selected type
             if (dateType === 'specific') {
                 document.getElementById('specificDateAuto').classList.remove('hidden');
+                timelineContainer.classList.add('hidden');
             } else if (dateType === 'month') {
                 document.getElementById('monthSelectorAuto').classList.remove('hidden');
                 initializeMonthPicker();
+                // Show period timeline for month selection
+                timelineContainer.classList.remove('hidden');
+                loadAndDisplayPeriodTimeline();
             } else if (dateType === 'year') {
                 document.getElementById('yearSelectorAuto').classList.remove('hidden');
                 initializeYearPicker();
+                // Show period timeline for year selection
+                timelineContainer.classList.remove('hidden');
+                loadAndDisplayPeriodTimeline();
             } else if (dateType === 'period') {
                 document.getElementById('periodSelectorAuto').classList.remove('hidden');
                 loadPricePeriodsFromHistory();
+                // Show period timeline for period selection
+                timelineContainer.classList.remove('hidden');
+                loadAndDisplayPeriodTimeline();
             }
+        }
+        
+        function loadAndDisplayPeriodTimeline() {
+            const history = JSON.parse(localStorage.getItem('calendarScansHistory') || '[]');
+            
+            if (history.length === 0) {
+                displayPeriodTimeline([]);
+                return;
+            }
+            
+            const latestScan = history[0];
+            const periods = latestScan.periods || [];
+            
+            displayPeriodTimeline(periods);
         }
         
         function initializeMonthPicker() {
@@ -4882,10 +4907,14 @@ Continue?`);
             }
         }
 
+        // Initialize page
         loadCustomDias();
         document.getElementById('pickupDate').valueAsDate = new Date();
         document.getElementById('pickupDateAuto').valueAsDate = new Date();
         initTable();
+        
+        // Load detected periods on page load
+        loadAndDisplayPeriodTimeline();
     </script>
 </body>
 </html>
