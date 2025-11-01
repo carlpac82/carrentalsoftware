@@ -1988,6 +1988,24 @@
             return null;
         }
         
+        // Mapeamento de fotos por GRUPO da AutoPrudente
+        const GROUP_IMAGES = {
+            'B1': 'https://www.carjet.com/cdn/img/cars/M/car_C61.jpg',  // Renault Twingo
+            'B2': 'https://www.carjet.com/cdn/img/cars/M/car_C13.jpg',  // Nissan Micra
+            'D': 'https://www.carjet.com/cdn/img/cars/M/car_C01.jpg',   // Seat Ibiza
+            'E1': 'https://www.carjet.com/cdn/img/cars/M/car_C52.jpg',  // Hyundai i20
+            'E2': 'https://www.carjet.com/cdn/img/cars/M/car_F02.jpg',  // Ford Focus
+            'F': 'https://www.carjet.com/cdn/img/cars/M/car_F252.jpg',  // VW T-Cross
+            'G': 'https://www.carjet.com/cdn/img/cars/M/car_F24.jpg',   // Nissan Qashqai
+            'J1': 'https://www.carjet.com/cdn/img/cars/M/car_A112.jpg', // Fiat 500X Auto
+            'J2': 'https://www.carjet.com/cdn/img/cars/M/car_A17.jpg',  // Citroen C4
+            'L1': 'https://www.carjet.com/cdn/img/cars/M/car_L154.jpg', // Fiat 500 Cabrio
+            'L2': 'https://www.carjet.com/cdn/img/cars/M/car_L41.jpg',  // Peugeot 108 Cabrio
+            'M1': 'https://www.carjet.com/cdn/img/cars/M/car_A219.jpg', // Citroen C4 Picasso Auto
+            'M2': 'https://www.carjet.com/cdn/img/cars/M/car_A219.jpg', // Citroen C4 Picasso
+            'N': 'https://www.carjet.com/cdn/img/cars/M/car_A219.jpg'   // 9 Seater (placeholder)
+        };
+        
         function imageUrlFor(it) {
             const car = String(it.car || '').trim();
             const supplier = String(it.supplier || '').trim();
@@ -2055,16 +2073,22 @@
         }
         
         function getCarImage(carItem, supplierType = 'competitor') {
-            // Use imageUrlFor mapping function (same as index.html)
+            const itemGroup = carItem.group || extractGroup(carItem.car || '');
+            
+            // PRIORITY 1: Use GROUP_IMAGES for AutoPrudente and Automated prices
+            if ((supplierType === 'autoprudente' || supplierType === 'automated') && itemGroup && GROUP_IMAGES[itemGroup]) {
+                console.log(`📸 Using GROUP_IMAGES for ${itemGroup}: ${GROUP_IMAGES[itemGroup]}`);
+                return GROUP_IMAGES[itemGroup];
+            }
+            
+            // PRIORITY 2: Use imageUrlFor mapping function (same as index.html)
             const mappedUrl = imageUrlFor(carItem);
             
             if (mappedUrl && mappedUrl !== '') {
                 return mappedUrl;
             }
             
-            // Fallback: Use car icon SVG as data URI with correct group from THIS item
-            const itemGroup = carItem.group || extractGroup(carItem.car || '');
-            
+            // PRIORITY 3: Fallback - Use car icon SVG as data URI with correct group from THIS item
             // Select color based on supplier type
             let color, textColor;
             if (supplierType === 'autoprudente') {
