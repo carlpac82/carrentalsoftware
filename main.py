@@ -8675,6 +8675,118 @@ async def load_user_settings(request: Request):
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
+# ============================================================
+# API ENDPOINTS - EXTERNAL AI INTEGRATION (Claude/GPT)
+# ============================================================
+
+@app.post("/api/ai/external-analysis")
+async def external_ai_analysis(request: Request):
+    """
+    Análise de pricing usando AI externa (Claude Sonnet 3.5 ou GPT-4)
+    Requer ANTHROPIC_API_KEY ou OPENAI_API_KEY no .env
+    """
+    require_auth(request)
+    
+    try:
+        data = await request.json()
+        
+        group = data.get("group")
+        days = data.get("days")
+        location = data.get("location")
+        current_price = data.get("current_price")
+        competitors = data.get("competitors", [])
+        provider = data.get("provider", "claude")  # claude ou openai
+        
+        if not all([group, days, location, current_price]):
+            return JSONResponse({
+                "ok": False,
+                "error": "Missing required fields: group, days, location, current_price"
+            }, status_code=400)
+        
+        # Importar AI assistant
+        try:
+            from ai_pricing_assistant import get_ai_assistant
+            
+            ai_assistant = get_ai_assistant(provider=provider)
+            
+            # Verificar se AI está disponível
+            status = ai_assistant.get_status()
+            
+            if not status['available']:
+                return JSONResponse({
+                    "ok": False,
+                    "error": f"AI provider '{provider}' not available. Please install required libraries and set API key.",
+                    "status": status,
+                    "fallback_used": True
+                }, status_code=503)
+            
+            # Fazer análise
+            analysis = ai_assistant.analyze_market_positioning(
+                group=group,
+                days=int(days),
+                location=location,
+                current_price=float(current_price),
+                competitors=competitors
+            )
+            
+            logging.info(f"✅ AI Analysis completed: {group}/{days}d using {analysis.get('ai_provider', 'unknown')}")
+            
+            return JSONResponse({
+                "ok": True,
+                "analysis": analysis,
+                "provider": provider,
+                "status": status
+            })
+            
+        except ImportError as e:
+            logging.error(f"❌ AI assistant import error: {str(e)}")
+            return JSONResponse({
+                "ok": False,
+                "error": f"AI assistant not available: {str(e)}",
+                "hint": "Install required libraries: pip install anthropic openai"
+            }, status_code=500)
+        
+    except Exception as e:
+        logging.error(f"❌ External AI analysis error: {str(e)}")
+        import traceback
+        return JSONResponse({
+            "ok": False,
+            "error": str(e),
+            "traceback": traceback.format_exc()
+        }, status_code=500)
+
+@app.get("/api/ai/status")
+async def ai_status(request: Request):
+    """Verifica status da integração com AI externa"""
+    require_auth(request)
+    
+    try:
+        from ai_pricing_assistant import get_ai_assistant
+        
+        # Testar ambos providers
+        claude_assistant = get_ai_assistant(provider="claude")
+        claude_status = claude_assistant.get_status()
+        
+        openai_assistant = get_ai_assistant(provider="openai")
+        openai_status = openai_assistant.get_status()
+        
+        return JSONResponse({
+            "ok": True,
+            "claude": claude_status,
+            "openai": openai_status,
+            "recommended": "claude" if claude_status['available'] else ("openai" if openai_status['available'] else "none"),
+            "env_keys": {
+                "anthropic": "ANTHROPIC_API_KEY" in os.environ,
+                "openai": "OPENAI_API_KEY" in os.environ
+            }
+        })
+    except Exception as e:
+        return JSONResponse({
+            "ok": False,
+            "error": str(e),
+            "hint": "AI integration not configured. Install: pip install anthropic openai"
+        }, status_code=500)
+
 @app.get("/api/vehicles/with-originals")
 async def get_vehicles_with_originals(request: Request):
     """Retorna veículos com nomes originais do scraping"""
