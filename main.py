@@ -3645,13 +3645,14 @@ async def track_by_params(request: Request):
             elif 'albufeira' in location.lower():
                 carjet_location = 'Albufeira Cidade'  # Nome EXATO do CarJet (sem código)
             
-            # Configurar Chrome headless
+            # Configurar Chrome COM INTERFACE VISUAL (para debug)
             chrome_options = Options()
-            chrome_options.add_argument('--headless')
+            # chrome_options.add_argument('--headless')  # DESATIVADO para ver o que acontece
             chrome_options.add_argument('--no-sandbox')
             chrome_options.add_argument('--disable-dev-shm-usage')
-            chrome_options.add_argument('--disable-gpu')
+            # chrome_options.add_argument('--disable-gpu')
             chrome_options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/118.0.0.0 Safari/537.36')
+            chrome_options.add_argument('--start-maximized')  # Maximizar janela
             
             # Iniciar driver
             driver = webdriver.Chrome(
@@ -3680,9 +3681,12 @@ async def track_by_params(request: Request):
                         EC.presence_of_element_located((By.NAME, "pickup"))
                     )
                     print(f"[SELENIUM] ✓ Campo pickup encontrado!", file=sys.stderr, flush=True)
+                    time.sleep(1)  # Pausa para ver
                     pickup_input.clear()
+                    print(f"[SELENIUM] Digitando: {carjet_location}", file=sys.stderr, flush=True)
                     pickup_input.send_keys(carjet_location)
-                    time.sleep(1.5)  # Aguardar autocomplete carregar
+                    print(f"[SELENIUM] Aguardando autocomplete...", file=sys.stderr, flush=True)
+                    time.sleep(3)  # Aguardar autocomplete carregar (aumentado para ver)
                     
                     # Clicar na primeira sugestão do autocomplete
                     try:
